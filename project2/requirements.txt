@@ -6,3 +6,5 @@ PySocks
 pylint
 pytest
 requests
+scikit-learn
+numpy

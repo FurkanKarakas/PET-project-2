@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 services:
   server:
     build: ./docker/server_img
@@ -7,8 +7,8 @@ services:
     networks:
       - cs523
     volumes:
-    - ./tor:/var/lib/tor
-    - ./:/server
+      - ./tor:/var/lib/tor
+      - ./:/server
   client:
     build: ./docker/client_img
     image: cs523-client-img:latest
@@ -16,8 +16,7 @@ services:
     networks:
       - cs523
     volumes:
-    - ./:/client
+      - ./:/client
 networks:
   cs523:
     driver: bridge
-

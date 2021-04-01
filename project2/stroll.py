@@ -14,7 +14,6 @@ State = Any
 class Server:
     """Server"""
 
-
     def __init__(self):
         """
         Server constructor.
@@ -24,11 +23,10 @@ class Server:
         ###############################################
         raise NotImplementedError
 
-
     @staticmethod
     def generate_ca(
-            subscriptions: List[str]
-        ) -> Tuple[bytes, bytes]:
+        subscriptions: List[str]
+    ) -> Tuple[bytes, bytes]:
         """Initializes the credential system. Runs exactly once in the
         beginning. Decides on schemes public parameters and choses a secret key
         for the server.
@@ -49,15 +47,14 @@ class Server:
         ###############################################
         raise NotImplementedError
 
-
     def process_registration(
-            self,
-            server_sk: bytes,
-            server_pk: bytes,
-            issuance_request: bytes,
-            username: str,
-            subscriptions: List[str]
-        ) -> bytes:
+        self,
+        server_sk: bytes,
+        server_pk: bytes,
+        issuance_request: bytes,
+        username: str,
+        subscriptions: List[str]
+    ) -> bytes:
         """ Registers a new account on the server.
 
         Args:
@@ -76,14 +73,13 @@ class Server:
         ###############################################
         raise NotImplementedError
 
-
     def check_request_signature(
         self,
         server_pk: bytes,
         message: bytes,
         revealed_attributes: List[str],
         signature: bytes
-        ) -> bool:
+    ) -> bool:
         """ Verify the signature on the location request
 
         Args:
@@ -113,13 +109,12 @@ class Client:
         ###############################################
         raise NotImplementedError()
 
-
     def prepare_registration(
-            self,
-            server_pk: bytes,
-            username: str,
-            subscriptions: List[str]
-        ) -> Tuple[bytes, State]:
+        self,
+        server_pk: bytes,
+        username: str,
+        subscriptions: List[str]
+    ) -> Tuple[bytes, State]:
         """Prepare a request to register a new account on the server.
 
         Args:
@@ -139,13 +134,12 @@ class Client:
         ###############################################
         raise NotImplementedError
 
-
     def process_registration_response(
-            self,
-            server_pk: bytes,
-            server_response: bytes,
-            private_state: State
-        ) -> bytes:
+        self,
+        server_pk: bytes,
+        server_response: bytes,
+        private_state: State
+    ) -> bytes:
         """Process the response from the server.
 
         Args:
@@ -162,14 +156,13 @@ class Client:
         ###############################################
         raise NotImplementedError
 
-
     def sign_request(
-            self,
-            server_pk: bytes,
-            credentials: bytes,
-            message: bytes,
-            types: List[str]
-        ) -> bytes:
+        self,
+        server_pk: bytes,
+        credentials: bytes,
+        message: bytes,
+        types: List[str]
+    ) -> bytes:
         """Signs the request with the client's credential.
 
         Arg:

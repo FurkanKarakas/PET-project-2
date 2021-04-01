@@ -17,7 +17,7 @@ of the SecretStroll and reduce potential networking problems while running the
 application in different environments.
 
 **Skeleton.** Both the client and the server provide a command-line interface to
-run and interact with the server.  The underlying location-based service is
+run and interact with the server. The underlying location-based service is
 already implemented in the skeleton, and your task is to add the authentication
 with attribute-based credentials.
 
@@ -40,9 +40,8 @@ code. You only need to implement attribute-based credentials and update the
 **Testing**. An integral part of system development is testing the system. In
 your implementation, you should check both success and failure paths when your
 working with cryptographic primitives. In this project, you **must** use the
-*pytest* framework to test your system. You can visit
+_pytest_ framework to test your system. You can visit
 [https://www.tutorialspoint.com/pytest/index.htm](pytest_turorials) for guides.
-
 
 ## Setting up the development environment
 
@@ -68,7 +67,7 @@ to develop inside the VM.**
 
 There are two accounts on the VM (`user:password`):
 
-```
+```bash
 student:student
 root:root
 ```
@@ -80,13 +79,13 @@ as your development environment.
 
 In VirtualBox, you can set up ssh access to the VM by following these steps:
 
- * Open the settings of your image
- * Go to the "Network" panel
- * Choose "Advanced" and click on the "Port forwarding" button
- * Add a forwarding rule (green "plus" button on the side)
- * In the forwarding rule, leave IP addresses empty, set **Host port** to _2222_,
-   and **Guest port** to 22 (the default SSH port)
- * Restart the virtual machine
+- Open the settings of your image
+- Go to the "Network" panel
+- Choose "Advanced" and click on the "Port forwarding" button
+- Add a forwarding rule (green "plus" button on the side)
+- In the forwarding rule, leave IP addresses empty, set **Host port** to _2222_,
+  and **Guest port** to 22 (the default SSH port)
+- Restart the virtual machine
 
 Now, you can connect to your virtual machine via ssh:
 `ssh -p 2222 student@127.0.0.1`
@@ -95,27 +94,26 @@ This is how you copy files _TO_ the VM:
 `scp -P 2222 <path_to_copy_from_on_host_OS> student@127.0.0.1:<path_to_copy_to_on_guest_OS>`
 
 Copy files _FROM_ the VM:
-`scp -P 2222 student@127.0.0.1:<path_to_copy_from_on_guest_OS> <path_to_copy_to_on_host_OS> `
-
+`scp -P 2222 student@127.0.0.1:<path_to_copy_from_on_guest_OS> <path_to_copy_to_on_host_OS>`
 
 ## Files in this repository
 
 This repostory contains the skeleton code for Parts 1 and 3:
 
-* `credential.py`—Source code that you have to complete.
-* `stroll.py`—Source code that you have to complete.
-* `client.py`—Client CLI calling classes and methods defined in `stroll.py`.
-* `server.py`—Server CLI calling classes and methods defined in `stroll.py`.
-* `serialization.py`—Extends the library `jsonpickle` to serialize python
+- `credential.py`—Source code that you have to complete.
+- `stroll.py`—Source code that you have to complete.
+- `client.py`—Client CLI calling classes and methods defined in `stroll.py`.
+- `server.py`—Server CLI calling classes and methods defined in `stroll.py`.
+- `serialization.py`—Extends the library `jsonpickle` to serialize python
   objects.
-* `fingerprinting.py`—skeleton for Part 3.
-* `requirements.txt`—Required Python libraries.
-* `docker-compose.yaml`—*docker compose* configuration describing how to run the
+- `fingerprinting.py`—skeleton for Part 3.
+- `requirements.txt`—Required Python libraries.
+- `docker-compose.yaml`—_docker compose_ configuration describing how to run the
   Docker containers.
-* `docker/`—Directory containing Docker configurations for running the client
+- `docker/`—Directory containing Docker configurations for running the client
   and the server.
-* `tor/`—Intentionally empty folder needed to run a Tor server.
-* `fingerprint.db`—Database containing POI information for Part 3.
+- `tor/`—Intentionally empty folder needed to run a Tor server.
+- `fingerprint.db`—Database containing POI information for Part 3.
 
 The directory `privacy_evaluation` contains files for the part 2.
 
@@ -127,9 +125,10 @@ provide a step-by-step guide of running the client and server.
 
 ### Working with the Docker infrastructure
 
-*Before launching the infrastructure, ensure the `tor` directory in the project
-skeleton has the correct permissions*
-```
+_Before launching the infrastructure, ensure the `tor` directory in the project
+skeleton has the correct permissions_
+
+```bash
 student@cs523:~/skeleton$ chmod 777 tor
 student@cs523:~/skeleton$ ls -ld tor
 drwxrwxrwx 2 student student    4096 mar 24 15:31 tor
@@ -142,28 +141,31 @@ Before setting up the Docker infrastructure for the first time, you must first
 build the images which will be used to run the client and server containers. To
 do so, run the following command in the skeleton directory, which contains the
 file `docker-compose.yml`:
-```
+
+```bash
 docker-compose build
 ```
 
 To set up the Docker infrastructure, run the following command in the directory
 containing the file `docker-compose.yml`:
-```
+
+```bash
 docker-compose up -d
 ```
 
 When you stop working with the infrastructure, remember to shut it down by
 running the following command in the directory containing the file
 `docker-compose.yml`:
-```
+
+```bash
 docker-compose down
 ```
 
-*If you forget to shut down the Docker infrastructure, e.g., before shutting down
+_If you forget to shut down the Docker infrastructure, e.g., before shutting down
 your computer, you might end up with stopped Docker containers preventing the
 creation of the new ones when you to re-launch the infrastructure the next time.
 This can be fixed by removing the network bridge with `docker-compose down` and
-destroying the stopped Docker containers with `docker container prune -f`.*
+destroying the stopped Docker containers with `docker container prune -f`._
 
 ### Accessing the data
 
@@ -174,10 +176,8 @@ read the file `docker-compose.yml` to see how it is done.
 If you need to transfer some data between your VM and your host machine, you can
 set up ssh access and use the `scp` command as detailed before. Another option
 is to have shared directories between the VM and your host. For this feature to
-work correctly you have to install *Guest Additions* from VirtualBox on the VM
+work correctly you have to install _Guest Additions_ from VirtualBox on the VM
 and refer to their documentation.
-
-
 
 ### Tor integration
 
@@ -189,12 +189,11 @@ If your project works if used normally, but fails when using Tor, you may
 try to change the permission of the Tor directory with the following command
 within the Docker container:
 
-```
+```bash
 (server) $ chmod 700 /var/lib/tor/hidden_service/
 ```
 
 If the problem persists, call an assistant.
-
 
 ### Server
 
@@ -204,12 +203,13 @@ then running the commands inside this shell.
 To execute a shell in the container in which the server is to be launched, run
 the following command:
 
-```
+```bash
 docker exec -it cs523-server /bin/bash
 ```
 
 In this container, the root directory of the project is mounted on `/server`.
-```
+
+```bash
 cd /server
 ```
 
@@ -218,7 +218,8 @@ the public and secret keys, and `run` runs the server. The server and its
 subcommands have a help option, which you can access using the `-h` argument.
 
 Key generation example:
-```
+
+```bash
 python3 server.py setup -S restaurant -S bar -S sushi
 
 usage: server.py setup [-h] [-p PUB] [-s SEC] -S SUBSCRIPTIONS
@@ -234,7 +235,8 @@ optional arguments:
 ```
 
 Server run example:
-```
+
+```bash
 python3 server.py run
 
 usage: server.py run [-h] [-p PUB] [-s SEC]
@@ -261,12 +263,13 @@ about each POI in the list. You must not modify the database.
 
 To execute a shell in the client container, run the following command:
 
-```
+```bash
 docker exec -it cs523-client /bin/bash
 ```
 
 In this container, the root directory of the project is mounted on `/client`.
-```
+
+```bash
 cd /client
 ```
 
@@ -275,7 +278,8 @@ the server, the client and its subcommands have a help option, which you can
 access using the `-h` argument.
 
 Use `get-pk` to retrieve the public key from the server:
-```
+
+```bash
 python3 client.py get-pk
 
 usage: client.py get-pk [-h] [-o OUT] [-t]
@@ -288,7 +292,8 @@ optional arguments:
 ```
 
 Use `register` to register an account on the serve:
-```
+
+```bash
 python3 client.py register -u your_name -S restaurant -S bar
 
 usage: client.py register [-h] [-p PUB] -u USER [-o OUT] -S SUBSCRIPTIONS [-t]
@@ -307,7 +312,8 @@ optional arguments:
 
 Use `loc` and `grid` commands to retrieve information about points of interests
 using lat/lon location (Part 1) and cell identifier (Part 3), respectively:
-```
+
+```bash
 python3 client.py loc 46.52345 6.57890 -T restaurant -T bar
 
 usage: client.py loc [-h] [-p PUB] [-c CREDENTIAL] -T TYPES [-t] lat lon
@@ -333,7 +339,7 @@ range \[46.5, 46.57\] and longitude in range \[6.55, 6.65\] (Lausanne area).
 You can make queries outside these values, but you will not find anything
 interesting.
 
-```
+```bash
 python3 client.py grid 42 -T restaurant
 
 usage: client.py grid [-h] [-p PUB] [-c CREDENTIAL] [-T TYPES] [-t] cell_id
@@ -354,22 +360,24 @@ optional arguments:
 ```
 
 ## A sample run of Part 1
+
 Here we show a typical run of the system for Part 1.
 
 Initialization:
 
-
 Open a shell
-```
-$ cd skeleton
-$ docker-compose build
-$ docker-compose up -d
+
+```bash
+cd skeleton
+docker-compose build
+docker-compose up -d
 ```
 
 Server side:
 
 Open a shell
-```
+
+```bash
 $ cd skeleton
 $ docker exec -it cs523-server /bin/bash
 (server) $ cd /server
@@ -378,7 +386,8 @@ $ docker exec -it cs523-server /bin/bash
 ```
 
 Client side:
-```
+
+```bash
 Open a shell
 $ cd skeleton
 $ docker exec -it cs523-client /bin/bash
@@ -389,16 +398,18 @@ $ docker exec -it cs523-client /bin/bash
 ```
 
 Close everything down at the end of the experiment:
-```
-$ docker-compose down
+
+```bash
+docker-compose down
 ```
 
 ## A sample run of Part 3
+
 Here we provide a typical run of the system for Part 3:
 
 Initialization:
 
-```
+```bash
 Open a shell
 $ cd skeleton
 $ docker-compose build
@@ -410,7 +421,7 @@ Server side:
 You should have already generated the keys in Part 1, so you do not need to
 repeat that step.
 
-```
+```bash
 Open a shell
 $ cd skeleton
 $ docker exec -it cs523-server /bin/bash
@@ -424,7 +435,7 @@ You should have already performed the registration in Part 1, so you do not need
 to the repeat the step. Use the grid parameter to query for a particular cell.
 Set the reveal argument (-r) to an empty value. Set the -t argument to use Tor. The example run below queries the server for cell ID = 42.
 
-```
+```bash
 Open a shell
 $ cd skeleton
 $ docker exec -it cs523-client /bin/bash
@@ -433,6 +444,7 @@ $ docker exec -it cs523-client /bin/bash
 ```
 
 Close everything down at the end of the experiment:
-```
-$ docker-compose down
+
+```bash
+docker-compose down
 ```

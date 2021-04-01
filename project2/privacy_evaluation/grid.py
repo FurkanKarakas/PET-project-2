@@ -1,6 +1,6 @@
 import bisect
 
-## Grid parameters
+# Grid parameters
 # Top left corner of the area
 MAP_LAT = 46.5
 MAP_LON = 6.55
@@ -30,4 +30,3 @@ def location_to_cell_id(lat, lon):
     i = bisect.bisect(GRID_LAT_POINTS, lat)
     j = bisect.bisect(GRID_LON_POINTS, lon)
     return i * CELL_NUM_LAT + j + 1
-

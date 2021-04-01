@@ -38,7 +38,8 @@ class ClientHTTPError(Exception):
 def main(args: List[str]) -> None:
     """Parse the arguments given to the client, and call the appropriate method."""
 
-    parser = argparse.ArgumentParser(description="Client for CS-523 project 2.")
+    parser = argparse.ArgumentParser(
+        description="Client for CS-523 project 2.")
     subparsers = parser.add_subparsers(help="Command")
 
     # Get public key parser.
@@ -146,7 +147,8 @@ def main(args: List[str]) -> None:
     parser_loc.set_defaults(callback=client_loc)
 
     # Parser for part 3 of the project 2
-    parser_grid = subparsers.add_parser("grid", help="Part 3 of the project 2.")
+    parser_grid = subparsers.add_parser(
+        "grid", help="Part 3 of the project 2.")
     parser_grid.add_argument(
         "cell_id",
         help="Cell identifier.",
@@ -288,7 +290,8 @@ def client_register(args: argparse.Namespace) -> None:
         res = session.post(url=url, files=files)
 
         if res.status_code != 200:
-            raise ClientHTTPError("The client failed to register to the server!")
+            raise ClientHTTPError(
+                "The client failed to register to the server!")
 
         issuance_res = res.content
 

@@ -1,4 +1,5 @@
 import numpy as np
+import sys
 
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
@@ -6,12 +7,11 @@ from sklearn.model_selection import StratifiedKFold
 
 
 def classify(train_features, train_labels, test_features, test_labels):
-
     """Function to perform classification, using a 
     Random Forest. 
 
     Reference: https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html
-    
+
     Args:
         train_features (numpy array): list of features used to train the classifier
         train_labels (numpy array): list of labels used to train the classifier
@@ -30,11 +30,11 @@ def classify(train_features, train_labels, test_features, test_labels):
     clf.fit(train_features, train_labels)
     # Use the classifier to make predictions on the test features.
     predictions = clf.predict(test_features)
-    
+
     return predictions
 
-def perform_crossval(features, labels, folds=10):
 
+def perform_crossval(features, labels, folds=10):
     """Function to perform cross-validation.
     Args:
         features (list): list of features
@@ -42,7 +42,7 @@ def perform_crossval(features, labels, folds=10):
         folds (int): number of fold for cross-validation (default=10)
     Returns:
         You can modify this as you like.
-    
+
     This function splits the data into training and test sets. It feeds
     the sets into the classify() function for each fold. 
 
@@ -50,7 +50,7 @@ def perform_crossval(features, labels, folds=10):
     to evaluate the performance.         
     """
 
-    kf = StratifiedKFold(n_splits=folds)
+    kf = StratifiedKFold(n_splits=folds)  # type: ignore
     labels = np.array(labels)
     features = np.array(features)
 
@@ -63,8 +63,8 @@ def perform_crossval(features, labels, folds=10):
     # TODO: Write code to evaluate the performance of your classifier
     ###############################################
 
-def load_data():
 
+def load_data():
     """Function to load data that will be used for classification.
 
     Args:
@@ -72,10 +72,10 @@ def load_data():
     Returns:
         features (list): the list of features you extract from every trace
         labels (list): the list of identifiers for each trace
-    
+
     An example: Assume you have traces (trace1...traceN) for cells with IDs in the
     range 1-N.  
-    
+
     You extract a list of features from each trace:
     features_trace1 = [f11, f12, ...]
     .
@@ -92,16 +92,16 @@ def load_data():
     """
 
     ###############################################
-    # TODO: Complete this function. 
+    # TODO: Complete this function.
     ###############################################
 
     features = []
     labels = []
 
     return features, labels
-        
-def main():
 
+
+def main():
     """Please complete this skeleton to implement cell fingerprinting.
     This skeleton provides the code to perform classification 
     using a Random Forest classifier. You are free to modify the 
@@ -112,7 +112,8 @@ def main():
 
     features, labels = load_data()
     perform_crossval(features, labels, folds=10)
-    
+
+
 if __name__ == "__main__":
     try:
         main()

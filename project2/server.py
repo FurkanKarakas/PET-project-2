@@ -20,7 +20,8 @@ from stroll import Server
 def main(args: List[str]) -> None:
     """Parse the arguments given to the server, and call the appropriate method."""
 
-    parser = argparse.ArgumentParser(description="Server for CS-523 project 2.")
+    parser = argparse.ArgumentParser(
+        description="Server for CS-523 project 2.")
     subparsers = parser.add_subparsers(help="Command")
 
     parser_setup = subparsers.add_parser(
@@ -131,7 +132,7 @@ APP = Flask(__name__)
 DB = SQLAlchemy()
 
 
-class PoI(DB.Model):
+class PoI(DB.Model):  # type: ignore
     """A PoI object consists of the following:
 
     poi_id -- ID of the PoI
@@ -143,11 +144,11 @@ class PoI(DB.Model):
 
     # pylint: disable=no-member
 
-    poi_id = DB.Column(DB.Integer, primary_key=True)
-    poi_name = DB.Column(DB.String)
-    poi_address = DB.Column(DB.String)
-    grid_id = DB.Column(DB.Integer)
-    poi_ratings = DB.Column(DB.String)
+    poi_id = DB.Column(DB.Integer, primary_key=True)  # type: ignore
+    poi_name = DB.Column(DB.String)  # type: ignore
+    poi_address = DB.Column(DB.String)  # type: ignore
+    grid_id = DB.Column(DB.Integer)  # type: ignore
+    poi_ratings = DB.Column(DB.String)  # type: ignore
 
     def to_dict(self) -> Dict[str, Union[int, str]]:
         """
@@ -173,7 +174,7 @@ SECRET_KEY = None
 SERVER = None
 
 
-@APP.route("/public-key", methods=["GET"])
+@APP.route("/public-key", methods=["GET"])  # type: ignore
 def get_public_key():
     """Handle requests for public key."""
     return PUBLIC_KEY, 200
@@ -183,12 +184,13 @@ def get_public_key():
 def register():
     """Handle registrations."""
     username = request.files.get("username").read().decode("utf-8")
-    subscriptions_raw = request.files.get("subscriptions").read().decode("utf-8")
+    subscriptions_raw = request.files.get(
+        "subscriptions").read().decode("utf-8")
     issuance_req = request.files.get("issuance_req").read()
     subscriptions = json.loads(subscriptions_raw)
     registration_res = SERVER.process_registration(
-        SECRET_KEY,
-        PUBLIC_KEY,
+        SECRET_KEY,  # type: ignore
+        PUBLIC_KEY,  # type: ignore
         issuance_req,
         username,
         subscriptions
@@ -214,7 +216,7 @@ def get_poi_loc():
     message = (f"{lat},{lon}").encode("utf-8")
 
     valid = SERVER.check_request_signature(
-        PUBLIC_KEY, message, types, signature
+        PUBLIC_KEY, message, types, signature  # type: ignore
     )
 
     if not valid:
@@ -249,7 +251,7 @@ def get_poi_list():
     message = (f"{cell_id}").encode("utf-8")
 
     valid = SERVER.check_request_signature(
-        PUBLIC_KEY, message, types, signature
+        PUBLIC_KEY, message, types, signature  # type: ignore
     )
 
     if not valid:
@@ -279,7 +281,7 @@ def get_poi_info():
     poi_id = request.args.get('poi_id')
     noise_factor = 10
 
-    records = PoI.query.filter_by(poi_id=int(poi_id)).all()
+    records = PoI.query.filter_by(poi_id=int(poi_id)).all()  # type: ignore
     if records:
         poi_info = records[0].to_dict()
         poi_info["poi_ratings"] = json.loads(poi_info["poi_ratings"])

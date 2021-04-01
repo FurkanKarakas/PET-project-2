@@ -40,25 +40,25 @@ DisclosureProof = Any
 
 
 def generate_key(
-        attributes: List[Attribute]
-    ) -> Tuple[SecretKey, PublicKey]:
+    attributes: List[Attribute]
+) -> Tuple[SecretKey, PublicKey]:
     """ Generate signer key pair """
     raise NotImplementedError()
 
 
 def sign(
-        sk: SecretKey,
-        msgs: List[bytes]
-    ) -> Signature:
+    sk: SecretKey,
+    msgs: List[bytes]
+) -> Signature:
     """ Sign the vector of messages `msgs` """
     raise NotImplementedError()
 
 
 def verify(
-        pk: PublicKey,
-        signature: Signature,
-        msgs: List[bytes]
-    ) -> bool:
+    pk: PublicKey,
+    signature: Signature,
+    msgs: List[bytes]
+) -> bool:
     """ Verify the signature on a vector of messages """
     raise NotImplementedError()
 
@@ -70,9 +70,9 @@ def verify(
 ## ISSUANCE PROTOCOL ##
 
 def create_issue_request(
-        pk: PublicKey,
-        user_attributes: AttributeMap
-    ) -> IssueRequest:
+    pk: PublicKey,
+    user_attributes: AttributeMap
+) -> IssueRequest:
     """ Create an issuance request
 
     This corresponds to the "user commitment" step in the issuance protocol.
@@ -83,11 +83,11 @@ def create_issue_request(
 
 
 def sign_issue_request(
-        sk: SecretKey,
-        pk: PublicKey,
-        request: IssueRequest,
-        issuer_attributes: AttributeMap
-    ) -> BlindSignature:
+    sk: SecretKey,
+    pk: PublicKey,
+    request: IssueRequest,
+    issuer_attributes: AttributeMap
+) -> BlindSignature:
     """ Create a signature corresponding to the user's request
 
     This corresponds to the "Issuer signing" step in the issuance protocol.
@@ -96,9 +96,9 @@ def sign_issue_request(
 
 
 def obtain_credential(
-        pk: PublicKey,
-        response: BlindSignature
-    ) -> AnonymousCredential:
+    pk: PublicKey,
+    response: BlindSignature
+) -> AnonymousCredential:
     """ Derive a credential from the issuer's response
 
     This corresponds to the "Unblinding signature" step.
@@ -109,20 +109,20 @@ def obtain_credential(
 ## SHOWING PROTOCOL ##
 
 def create_disclosure_proof(
-        pk: PublicKey,
-        credential: AnonymousCredential,
-        hidden_attributes: List[Attribute],
-        message: bytes
-    ) -> DisclosureProof:
+    pk: PublicKey,
+    credential: AnonymousCredential,
+    hidden_attributes: List[Attribute],
+    message: bytes
+) -> DisclosureProof:
     """ Create a disclosure proof """
     raise NotImplementedError()
 
 
 def verify_disclosure_proof(
-        pk: PublicKey,
-        disclosure_proof: DisclosureProof,
-        message: bytes
-    ) -> bool:
+    pk: PublicKey,
+    disclosure_proof: DisclosureProof,
+    message: bytes
+) -> bool:
     """ Verify the disclosure proof
 
     Hint: The verifier may also want to retrieve the disclosed attributes
