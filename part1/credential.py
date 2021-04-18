@@ -16,7 +16,7 @@ the functions provided to resemble a more object-oriented interface.
 """
 
 from typing import Any, List, Tuple
-
+from petrelic.multiplicative.pairing import G1, G2, GT
 from serialization import jsonpickle
 
 
@@ -38,29 +38,39 @@ DisclosureProof = Any
 ## SIGNATURE SCHEME ##
 ######################
 
+class PSScheme:
+    """This class contains basic operations in a Pointcheval-Sanders scheme"""
 
-def generate_key(
-    attributes: List[Attribute]
-) -> Tuple[SecretKey, PublicKey]:
-    """ Generate signer key pair """
-    raise NotImplementedError()
+    @staticmethod
+    def generate_key(attributes: List[Attribute]) -> Tuple[SecretKey, PublicKey]:
+        """ Generate signer key pair """
+        L = len(attributes)
+        # List which stores our secret key
+        sk = list()
+        # x
+        sk.append(G1.order().random())
+        # y
+        for _ in range(L):
+            sk.append(G1.order().random())
+        X = G1.generator() ** sk[0]
+        X_tilde = G2.generator()**sk[0]
+        Y = [G1.generator()**y_i for y_i in sk[1:]]
+        Y_tilde = [G2.generator()**y_i for y_i in sk[1:]]
+        # List which stores our public keys
+        pk = [G1.generator(), *Y, G2.generator(), X_tilde, *Y_tilde]
+        sk.insert(1, X)
 
+        return pk, sk
 
-def sign(
-    sk: SecretKey,
-    msgs: List[bytes]
-) -> Signature:
-    """ Sign the vector of messages `msgs` """
-    raise NotImplementedError()
+    @staticmethod
+    def sign(sk: SecretKey, msgs: List[bytes]) -> Signature:
+        """ Sign the vector of messages `msgs` """
+        raise NotImplementedError()
 
-
-def verify(
-    pk: PublicKey,
-    signature: Signature,
-    msgs: List[bytes]
-) -> bool:
-    """ Verify the signature on a vector of messages """
-    raise NotImplementedError()
+    @staticmethod
+    def verify(pk: PublicKey, signature: Signature, msgs: List[bytes]) -> bool:
+        """ Verify the signature on a vector of messages """
+        raise NotImplementedError()
 
 
 #################################
