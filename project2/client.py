@@ -236,7 +236,7 @@ def client_get_pk(args: argparse.Namespace) -> None:
         url = f"http://{host}/public-key"
 
         # Done in a proper way, we would use HTTPS instead of HTTP.
-        session = create_session(proxy)
+        session = create_session(proxy)  # type: ignore
         res = session.get(url=url)
 
         if res.status_code != 200:
@@ -286,7 +286,7 @@ def client_register(args: argparse.Namespace) -> None:
             "issuance_req": issuance_req,
         }
 
-        session = create_session(proxy)
+        session = create_session(proxy)  # type:ignore
         res = session.post(url=url, files=files)
 
         if res.status_code != 200:
@@ -335,7 +335,7 @@ def client_loc(args: argparse.Namespace) -> None:
     }
 
     # Done in a proper way, we would use HTTPS instead of HTTP.
-    session = create_session(proxy)
+    session = create_session(proxy)  # type:ignore
     res = session.post(url=url, files=files)
 
     if res.status_code != 200:
@@ -387,7 +387,7 @@ def client_grid(args: argparse.Namespace) -> None:
     }
 
     # Done in a proper way, we would use HTTPS instead of HTTP.
-    session = create_session(proxy)
+    session = create_session(proxy)  # type:ignore
     res = session.post(url=url, files=files)
 
     if res.status_code != 200:
