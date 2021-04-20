@@ -23,7 +23,6 @@ from serialization import jsonpickle
 # Type hint aliases
 # Feel free to change them as you see fit.
 # Maybe at the end, you will not need aliases at all!
-Signature = Any
 Attribute = Any
 AttributeMap = Any
 IssueRequest = Any
@@ -37,10 +36,14 @@ DisclosureProof = Any
 ######################
 
 class SecretKey:
-    def __init__(self, x, X, y):
+    def __init__(self, x, X1, y):
         self.x = x
-        self.X = X
+        self.X1 = X1
         self.y = y
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({repr(self.x)}, {repr(self.X1)}, {repr(self.y)})"
+
 
 class PublicKey:
     def __init__(self, g1, Y1, g2, X2, Y2):
@@ -49,6 +52,19 @@ class PublicKey:
         self.g2 = g2
         self.X2 = X2
         self.Y2 = Y2
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({repr(self.g1)}, {repr(self.Y1)}, {repr(self.g2)}, {repr(self.X2)}, {repr(self.Y2)})"
+
+
+class Signature:
+    def __init__(self, h, sig):
+        self.h = h
+        self.sig = sig
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({repr(self.h)}, {repr(self.sig)})"
+
 
 class PSScheme:
     """This class contains basic operations in a Pointcheval-Sanders scheme"""
@@ -80,12 +96,26 @@ class PSScheme:
     @staticmethod
     def sign(sk: SecretKey, msgs: List[bytes]) -> Signature:
         """ Sign the vector of messages `msgs` """
-        raise NotImplementedError()
+        assert(len(msgs) == len(sk.y))
+        # pick random generator
+        # TODO: I'm not sure its random
+        h = G1.generator()
+        exponent = sk.x + sum([y_i * m_i for (y_i, m_i) in zip(sk.y, msgs)])
+
+        return Signature(h, h**exponent)
 
     @staticmethod
     def verify(pk: PublicKey, signature: Signature, msgs: List[bytes]) -> bool:
         """ Verify the signature on a vector of messages """
-        raise NotImplementedError()
+        if signature.h == G1.unity():
+            return False
+        else:
+            accum = pk.X2
+            assert(len(msgs) == len(pk.Y2))
+            for Y2_i, m_i in zip(pk.Y2, msgs):
+                accum *= Y2_i**m_i
+
+            return signature.h.pair(accum) == signature.sig.pair(pk.g2)
 
 
 #################################
