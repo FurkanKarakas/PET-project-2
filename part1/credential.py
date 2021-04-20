@@ -17,7 +17,7 @@ the functions provided to resemble a more object-oriented interface.
 
 from typing import Any, List, Tuple
 from petrelic.multiplicative.pairing import G1, G2, GT
-from serialization import jsonpickle
+import jsonpickle
 
 
 # Type hint aliases
@@ -70,7 +70,7 @@ class PSScheme:
     """This class contains basic operations in a Pointcheval-Sanders scheme"""
 
     @staticmethod
-    def generate_key(attributes: List[Attribute]) -> Tuple[SecretKey, PublicKey]:
+    def generate_keys(attributes: List[Attribute]) -> Tuple[SecretKey, PublicKey]:
         """ Generate signer key pair """
 
         # Pick uniformly random variables
@@ -100,7 +100,7 @@ class PSScheme:
         # pick random generator
         # TODO: I'm not sure its random
         h = G1.generator()
-        exponent = sk.x + sum([y_i * m_i for (y_i, m_i) in zip(sk.y, msgs)])
+        exponent = sk.x + sum([y_i * int.from_bytes(m_i, 'big') for (y_i, m_i) in zip(sk.y, msgs)])
 
         return Signature(h, h**exponent)
 
@@ -113,8 +113,7 @@ class PSScheme:
             accum = pk.X2
             assert(len(msgs) == len(pk.Y2))
             for Y2_i, m_i in zip(pk.Y2, msgs):
-                accum *= Y2_i**m_i
-
+                accum *= Y2_i**int.from_bytes(m_i, 'big')
             return signature.h.pair(accum) == signature.sig.pair(pk.g2)
 
 
