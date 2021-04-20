@@ -23,8 +23,6 @@ from serialization import jsonpickle
 # Type hint aliases
 # Feel free to change them as you see fit.
 # Maybe at the end, you will not need aliases at all!
-SecretKey = Any
-PublicKey = Any
 Signature = Any
 Attribute = Any
 AttributeMap = Any
@@ -38,28 +36,45 @@ DisclosureProof = Any
 ## SIGNATURE SCHEME ##
 ######################
 
+class SecretKey:
+    def __init__(self, x, X, y):
+        self.x = x
+        self.X = X
+        self.y = y
+
+class PublicKey:
+    def __init__(self, g1, Y1, g2, X2, Y2):
+        self.g1 = g1
+        self.Y1 = Y1
+        self.g2 = g2
+        self.X2 = X2
+        self.Y2 = Y2
+
 class PSScheme:
     """This class contains basic operations in a Pointcheval-Sanders scheme"""
 
     @staticmethod
     def generate_key(attributes: List[Attribute]) -> Tuple[SecretKey, PublicKey]:
         """ Generate signer key pair """
-        L = len(attributes)
-        # List which stores our secret key
-        sk = list()
-        # x
-        sk.append(G1.order().random())
-        # y
-        for _ in range(L):
-            sk.append(G1.order().random())
-        X = G1.generator() ** sk[0]
-        X_tilde = G2.generator()**sk[0]
-        Y = [G1.generator()**y_i for y_i in sk[1:]]
-        Y_tilde = [G2.generator()**y_i for y_i in sk[1:]]
-        # List which stores our public keys
-        pk = [G1.generator(), *Y, G2.generator(), X_tilde, *Y_tilde]
-        sk.insert(1, X)
 
+        # Pick uniformly random variables
+        x = G1.order().random()
+        y = [G1.order().random() for _ in range(len(attributes))]
+
+        # pick  random  generators
+        # TODO: I'm not sure if they are random
+        g1 = G1.generator()
+        g2 = G2.generator()
+
+        # Compute Xs and Ys
+        X1 = g1 ** x
+        X2 = g2 ** x
+        Y1 = [g1 ** y_i for y_i in y]
+        Y2 = [g2 ** y_i for y_i in y]
+
+        # Output public and secret keys
+        pk = PublicKey(g1, Y1, g2, X2, Y2)
+        sk = SecretKey(x, X1, y)
         return pk, sk
 
     @staticmethod
