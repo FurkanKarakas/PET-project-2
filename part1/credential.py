@@ -91,7 +91,7 @@ class PSScheme:
         # Output public and secret keys
         pk = PublicKey(g1, Y1, g2, X2, Y2)
         sk = SecretKey(x, X1, y)
-        return pk, sk
+        return sk, pk
 
     @staticmethod
     def sign(sk: SecretKey, msgs: List[bytes]) -> Signature:
@@ -100,7 +100,8 @@ class PSScheme:
         # pick random generator
         # TODO: I'm not sure its random
         h = G1.generator()
-        exponent = sk.x + sum([y_i * int.from_bytes(m_i, 'big') for (y_i, m_i) in zip(sk.y, msgs)])
+        exponent = sk.x + sum([y_i * int.from_bytes(m_i, 'big')
+                               for (y_i, m_i) in zip(sk.y, msgs)])
 
         return Signature(h, h**exponent)
 
