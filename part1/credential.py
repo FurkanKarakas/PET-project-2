@@ -79,6 +79,7 @@ class PSScheme:
 
         # pick  random  generators
         # TODO: I'm not sure if they are random
+        # ? Furkan: Why do you think the generators need to be random?
         g1 = G1.generator()
         g2 = G2.generator()
 
@@ -123,63 +124,67 @@ class PSScheme:
 #################################
 
 ## ISSUANCE PROTOCOL ##
+class ABCIssue:
 
-def create_issue_request(
-    pk: PublicKey,
-    user_attributes: AttributeMap
-) -> IssueRequest:
-    """ Create an issuance request
+    @staticmethod
+    def create_issue_request(
+        pk: PublicKey,
+        user_attributes: AttributeMap
+    ) -> IssueRequest:
+        """ Create an issuance request
 
-    This corresponds to the "user commitment" step in the issuance protocol.
+        This corresponds to the "user commitment" step in the issuance protocol.
 
-    *Warning:* You may need to pass state to the `obtain_credential` function.
-    """
-    raise NotImplementedError()
+        *Warning:* You may need to pass state to the `obtain_credential` function.
+        """
+        raise NotImplementedError()
 
+    @staticmethod
+    def sign_issue_request(
+        sk: SecretKey,
+        pk: PublicKey,
+        request: IssueRequest,
+        issuer_attributes: AttributeMap
+    ) -> BlindSignature:
+        """ Create a signature corresponding to the user's request
 
-def sign_issue_request(
-    sk: SecretKey,
-    pk: PublicKey,
-    request: IssueRequest,
-    issuer_attributes: AttributeMap
-) -> BlindSignature:
-    """ Create a signature corresponding to the user's request
+        This corresponds to the "Issuer signing" step in the issuance protocol.
+        """
+        raise NotImplementedError()
 
-    This corresponds to the "Issuer signing" step in the issuance protocol.
-    """
-    raise NotImplementedError()
+    @staticmethod
+    def obtain_credential(
+        pk: PublicKey,
+        response: BlindSignature
+    ) -> AnonymousCredential:
+        """ Derive a credential from the issuer's response
 
-
-def obtain_credential(
-    pk: PublicKey,
-    response: BlindSignature
-) -> AnonymousCredential:
-    """ Derive a credential from the issuer's response
-
-    This corresponds to the "Unblinding signature" step.
-    """
-    raise NotImplementedError()
+        This corresponds to the "Unblinding signature" step.
+        """
+        raise NotImplementedError()
 
 
 ## SHOWING PROTOCOL ##
+class ABCVerify:
 
-def create_disclosure_proof(
-    pk: PublicKey,
-    credential: AnonymousCredential,
-    hidden_attributes: List[Attribute],
-    message: bytes
-) -> DisclosureProof:
-    """ Create a disclosure proof """
-    raise NotImplementedError()
+    @staticmethod
+    def create_disclosure_proof(
+        pk: PublicKey,
+        credential: AnonymousCredential,
+        hidden_attributes: List[Attribute],
+        message: bytes
+    ) -> DisclosureProof:
+        """ Create a disclosure proof """
+        raise NotImplementedError()
 
+    @staticmethod
+    def verify_disclosure_proof(
+        pk: PublicKey,
+        disclosure_proof: DisclosureProof,
+        message: bytes
+    ) -> bool:
+        """ Verify the disclosure proof
 
-def verify_disclosure_proof(
-    pk: PublicKey,
-    disclosure_proof: DisclosureProof,
-    message: bytes
-) -> bool:
-    """ Verify the disclosure proof
-
-    Hint: The verifier may also want to retrieve the disclosed attributes
-    """
-    raise NotImplementedError()
+        Hint: The verifier may also want to retrieve the disclosed attributes
+        """
+        raise NotImplementedError()

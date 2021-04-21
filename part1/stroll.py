@@ -2,6 +2,8 @@
 Classes that you need to complete.
 """
 
+from jsonpickle.backend import JSONBackend
+from credential import ABCIssue, PSScheme, PublicKey, SecretKey
 from typing import Any, Dict, List, Union, Tuple
 
 # Optional import
@@ -21,12 +23,12 @@ class Server:
         ###############################################
         # TODO: Complete this function.
         ###############################################
-        raise NotImplementedError
+        pass
 
-    @staticmethod
-    def generate_ca(
-        subscriptions: List[str]
-    ) -> Tuple[bytes, bytes]:
+    @classmethod
+    def generate_ca(cls,
+                    subscriptions: List[str]
+                    ) -> Tuple[bytes, bytes]:
         """Initializes the credential system. Runs exactly once in the
         beginning. Decides on schemes public parameters and choses a secret key
         for the server.
@@ -45,7 +47,12 @@ class Server:
         ###############################################
         # TODO: Complete this function.
         ###############################################
-        raise NotImplementedError
+        sk, pk = PSScheme.generate_keys(subscriptions)
+        # Save subscriptions as `valid_attributes`
+        cls.valid_attributes = subscriptions
+        # jsonpickle.encode() returns a string. So, we encode it again to return a byte array
+        # The default .encode() method uses utf-8
+        return jsonpickle.encode(sk).encode(), jsonpickle.encode(pk).encode()
 
     def process_registration(
         self,
@@ -71,7 +78,26 @@ class Server:
         ###############################################
         # TODO: Complete this function.
         ###############################################
-        raise NotImplementedError
+        # Decode the public and secret keys
+        sk, pk = jsonpickle.decode(server_sk), jsonpickle.decode(server_pk)
+
+        # Check the types of sk and pk and make sure that they are in proper format.
+        if not isinstance(sk, SecretKey) or not isinstance(pk, PublicKey):
+            raise TypeError("Invalid type provided.")
+
+        subscriptions = subscriptions+[username]
+        # Decode the issuance
+        issuance = jsonpickle.decode(issuance_request)
+        # Check if attributes are valid
+        for subscription in subscriptions:
+            if subscription not in self.valid_attributes:
+                raise AttributeError(
+                    f"{subscription} is not a valid attribute.")
+        # Use the helper function to get the blind signature
+        blind_signature = ABCIssue.sign_issue_request(
+            sk, pk, issuance, subscriptions)
+        # Encode and return it
+        return jsonpickle.encode(blind_signature).encode()
 
     def check_request_signature(
         self,
