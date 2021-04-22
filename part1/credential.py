@@ -1,15 +1,12 @@
 """
 Skeleton credential module for implementing PS credentials
-
 The goal of this skeleton is to help you implementing PS credentials. Following
 this API is not mandatory and you can change it as you see fit. This skeleton
 only provides major functionality that you will need.
-
 You will likely have to define more functions and/or classes. In particular, to
 maintain clean code, we recommend to use classes for things that you want to
 send between parties. You can then use `jsonpickle` serialization to convert
 these classes to byte arrays (as expected by the other classes) and back again.
-
 We also avoided the use of classes in this template so that the code more closely
 resembles the original scheme definition. However, you are free to restructure
 the functions provided to resemble a more object-oriented interface.
@@ -132,12 +129,15 @@ class ABCIssue:
         user_attributes: AttributeMap
     ) -> IssueRequest:
         """ Create an issuance request
-
         This corresponds to the "user commitment" step in the issuance protocol.
-
         *Warning:* You may need to pass state to the `obtain_credential` function.
         """
-        raise NotImplementedError()
+        # Calculate commitment
+        C = pk.g1 ** G1.order().random()
+        for Y1_i, a_i in zip(pk.Y1, user_attributes.values()):
+            C *= Y1_i ** int.from_bytes(a_i, "big")    
+        # Calcluate proof
+        # TODO
 
     @staticmethod
     def sign_issue_request(
@@ -147,7 +147,6 @@ class ABCIssue:
         issuer_attributes: AttributeMap
     ) -> BlindSignature:
         """ Create a signature corresponding to the user's request
-
         This corresponds to the "Issuer signing" step in the issuance protocol.
         """
         raise NotImplementedError()
@@ -158,7 +157,6 @@ class ABCIssue:
         response: BlindSignature
     ) -> AnonymousCredential:
         """ Derive a credential from the issuer's response
-
         This corresponds to the "Unblinding signature" step.
         """
         raise NotImplementedError()
@@ -184,7 +182,6 @@ class ABCVerify:
         message: bytes
     ) -> bool:
         """ Verify the disclosure proof
-
         Hint: The verifier may also want to retrieve the disclosed attributes
         """
         raise NotImplementedError()
