@@ -14,7 +14,7 @@ the functions provided to resemble a more object-oriented interface.
 
 from typing import Any, List, Tuple
 from petrelic.multiplicative.pairing import G1, G2, GT
-import jsonpickle
+from serialization import jsonpickle
 
 
 # Type hint aliases

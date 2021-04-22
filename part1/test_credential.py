@@ -10,7 +10,7 @@ def test_scheme():
     msgs = [os.urandom(128) for i in range(100)]
 
     # Generate keys
-    pk, sk = PSScheme.generate_keys(msgs)
+    sk, pk = PSScheme.generate_keys(msgs)
 
     # Sign messages
     signature = PSScheme.sign(sk, msgs)
