@@ -12,7 +12,7 @@ resembles the original scheme definition. However, you are free to restructure
 the functions provided to resemble a more object-oriented interface.
 """
 
-from typing import Any, List, Tuple
+from typing import Any, List, Tuple, Mapping
 from petrelic.multiplicative.pairing import G1, G2, GT
 from serialization import jsonpickle
 
@@ -20,10 +20,8 @@ from serialization import jsonpickle
 # Type hint aliases
 # Feel free to change them as you see fit.
 # Maybe at the end, you will not need aliases at all!
-Attribute = Any
-AttributeMap = Any
-IssueRequest = Any
-BlindSignature = Any
+Attribute = bytes
+AttributeMap = Mapping[int, Attribute]
 AnonymousCredential = Any
 DisclosureProof = Any
 
@@ -63,6 +61,18 @@ class Signature:
         return f"{self.__class__.__name__}({repr(self.h)}, {repr(self.sig)})"
 
 
+class BlindSignature:
+    def __init__(self, h, sig):
+        self.h = h
+        self.sig = sig
+
+
+class IssueRequest:
+    def __init__(self, commitment, proof):
+        self.commitment = commitment
+        self.proof = proof
+
+
 class PSScheme:
     """This class contains basic operations in a Pointcheval-Sanders scheme"""
 
@@ -77,6 +87,7 @@ class PSScheme:
         # pick  random  generators
         # TODO: I'm not sure if they are random
         # ? Furkan: Why do you think the generators need to be random?
+        # ! Pascal: It says so here, maybe they meant arbitrary instead of random? https://moodle.epfl.ch/pluginfile.php/2898506/mod_resource/content/1/pointcheval-sanders.pdf
         g1 = G1.generator()
         g2 = G2.generator()
 
@@ -133,11 +144,14 @@ class ABCIssue:
         *Warning:* You may need to pass state to the `obtain_credential` function.
         """
         # Calculate commitment
-        C = pk.g1 ** G1.order().random()
-        for Y1_i, a_i in zip(pk.Y1, user_attributes.values()):
-            C *= Y1_i ** int.from_bytes(a_i, "big")    
-        # Calcluate proof
-        # TODO
+        t = G1.order().random()
+        C = pk.g1 ** t
+        for i, a_i in user_attributes.items():
+            C *= Y1[i] ** int.from_bytes(a_i, "big")
+        # TODO: Calculate proof
+        pi = None
+
+        return IssueRequest(C, pi)
 
     @staticmethod
     def sign_issue_request(
@@ -149,7 +163,12 @@ class ABCIssue:
         """ Create a signature corresponding to the user's request
         This corresponds to the "Issuer signing" step in the issuance protocol.
         """
-        raise NotImplementedError()
+        # TODO Check proof
+        u = G1.order().random()
+        accum = sk.X1 * request.commitment
+        for i, a_i in issuer_attributes.items():
+            accum *= Y1[i] ** int.from_bytes(a_i, "big")
+        return BlindSignature(u, accum)
 
     @staticmethod
     def obtain_credential(
