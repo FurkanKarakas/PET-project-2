@@ -96,10 +96,7 @@ class PSScheme:
         x = G1.order().random()
         y = [G1.order().random() for _ in range(len(attributes))]
 
-        # pick  random  generators
-        # TODO: I'm not sure if they are random
-        # ? Furkan: Why do you think the generators need to be random?
-        # ! Pascal: It says so here, maybe they meant arbitrary instead of random? https://moodle.epfl.ch/pluginfile.php/2898506/mod_resource/content/1/pointcheval-sanders.pdf
+        # take generators of G1 and G2
         g1 = G1.generator()
         g2 = G2.generator()
 
@@ -118,8 +115,8 @@ class PSScheme:
     def sign(sk: SecretKey, msgs: List[bytes]) -> Signature:
         """ Sign the vector of messages `msgs` """
         assert(len(msgs) == len(sk.y))
-        # pick random generator
-        # TODO: I'm not sure its random
+
+        # pick generator
         h = G1.generator()
         exponent = sk.x + sum([y_i * int.from_bytes(m_i, 'big')
                                for (y_i, m_i) in zip(sk.y, msgs)])
