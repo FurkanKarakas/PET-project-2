@@ -22,7 +22,6 @@ from serialization import jsonpickle
 # Maybe at the end, you will not need aliases at all!
 Attribute = bytes
 AttributeMap = Mapping[int, Attribute]
-AnonymousCredential = Any
 DisclosureProof = Any
 
 
@@ -67,9 +66,22 @@ class BlindSignature:
         self.sig = sig
 
 
+class AnonymousCredential:
+    def __init__(self, h, sig):
+        self.h = h
+        self.sig = sig
+
+
 class IssueRequest:
     def __init__(self, commitment, proof):
         self.commitment = commitment
+        self.proof = proof
+
+
+class DisclosureProof:
+    def __init__(self, signature, attributes, proof):
+        self.signature = signature
+        self.attributes = attributes
         self.proof = proof
 
 
@@ -178,7 +190,10 @@ class ABCIssue:
         """ Derive a credential from the issuer's response
         This corresponds to the "Unblinding signature" step.
         """
-        raise NotImplementedError()
+        # TODO: Not sure if this should be a fresh t or the same as in create_issue_request
+        t = G1.order().random()
+
+        return AnonymousCredential(response.h, response.sig / (response.h ** t))
 
 
 ## SHOWING PROTOCOL ##
@@ -192,7 +207,15 @@ class ABCVerify:
         message: bytes
     ) -> DisclosureProof:
         """ Create a disclosure proof """
-        raise NotImplementedError()
+        r = G1.order().random()
+        t = G1.order().random()
+        signature = Signature(credential.h**r, (credential.sig * credential.h**t)**r)
+        
+        proof = signature.h.pair(pk.g2)**t
+        for Y2_i, a_i in zip(pk.Y2, hidden_attributes):
+            proof *= signature.h.pair(Y2_i) ** int.from_bytes(a_i, 'big')
+
+        return DisclosureProof(signature, hidden_attributes, proof)
 
     @staticmethod
     def verify_disclosure_proof(
@@ -203,4 +226,11 @@ class ABCVerify:
         """ Verify the disclosure proof
         Hint: The verifier may also want to retrieve the disclosed attributes
         """
-        raise NotImplementedError()
+        signature = disclosure_proof.signature
+        # TODO: Notes say its sig, but it should probably be sig'
+        if signature.h == G1.unity():
+            return False   
+        proof = signature.h.pair(pk.g2)**t
+        for Y2_i, a_i in zip(pk.Y2, disclosure_proof.attributes):
+            proof *= signature.h.pair(Y2_i) ** int.from_bytes(a_i, 'big')
+        return proof == disclosure_proof.proof
