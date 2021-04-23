@@ -15,6 +15,7 @@ the functions provided to resemble a more object-oriented interface.
 from typing import Any, List, Tuple, Mapping
 from petrelic.multiplicative.pairing import G1, G2, GT
 from serialization import jsonpickle
+import hashlib
 
 
 # Type hint aliases
@@ -77,6 +78,15 @@ class IssueRequest:
         self.commitment = commitment
         self.proof = proof
 
+
+class Proof:
+    def __init__(self, *args: List[Any]):
+        argbytes = jsonpickle.encode(args).encode()
+        arghash = hashlib.sha256(argbytes)
+        self.proof = arghash.digest()
+
+    def __eq__(self, other: Any):
+        return isinstance(other, Proof) and self.proof == other.proof:
 
 class DisclosureProof:
     def __init__(self, signature, attributes, proof):
@@ -152,15 +162,25 @@ class ABCIssue:
         This corresponds to the "user commitment" step in the issuance protocol.
         *Warning:* You may need to pass state to the `obtain_credential` function.
         """
-        # Calculate commitment
+        user_attributes_ints = [int.from_bytes(a, "big") for a in user_attributes]
+        # Calculate C
         t = G1.order().random()
         C = pk.g1 ** t
         for i, a_i in user_attributes.items():
-            C *= Y1[i] ** int.from_bytes(a_i, "big")
-        # TODO: Calculate proof
-        pi = None
+            C *= pk.Y1[i] ** int.from_bytes(a_i, "big")
 
-        return IssueRequest(C, pi)
+        # Calculate commitment
+        k = G1.order.random()
+        comm_noise = [G1.order.random() for _ in range(len(attributes))]
+        commitment = pk.g1 ** k
+        for i, c_i in zip(user_attributes.keys(), comm_noise):
+            commitment *= pk.Y1[i] ** c_i
+
+        proof = Proof(C, commitment, pk)
+        response = [e[0].mod_sub(challenge * e[1],G1.order()) for e in zip(comm_values, [t] + hidden_attributes_bn)]
+        response = [c.mod_sub(callenge * int.from_bytes(a_i, "big"))]
+
+        return IssueRequest(C, proof, comm_noise)
 
     @staticmethod
     def sign_issue_request(
@@ -206,8 +226,9 @@ class ABCVerify:
         """ Create a disclosure proof """
         r = G1.order().random()
         t = G1.order().random()
-        signature = Signature(credential.h**r, (credential.sig * credential.h**t)**r)
-        
+        signature = Signature(
+            credential.h**r, (credential.sig * credential.h**t)**r)
+
         proof = signature.h.pair(pk.g2)**t
         for Y2_i, a_i in zip(pk.Y2, hidden_attributes):
             proof *= signature.h.pair(Y2_i) ** int.from_bytes(a_i, 'big')
@@ -226,7 +247,7 @@ class ABCVerify:
         signature = disclosure_proof.signature
         # TODO: Notes say its sig, but it should probably be sig'
         if signature.h == G1.unity():
-            return False   
+            return False
         proof = signature.h.pair(pk.g2)**t
         for Y2_i, a_i in zip(pk.Y2, disclosure_proof.attributes):
             proof *= signature.h.pair(Y2_i) ** int.from_bytes(a_i, 'big')
