@@ -73,19 +73,36 @@ class AnonymousCredential:
         self.h = h
         self.sig = sig
 
-
 class FiatShamirProof:
     def __init__(self, values, exponents, C, pk):
+        self.g = pk.g1
         self.noise = [G1.order.random() for _ in values]
         self.commitment = G1.unity()
         for v, n in zip(values, self.noise):
             self.commitment *= v**n
 
-        challenge_str = jsonpickle.encode([C, pk, self.commitment])
-        challenge_hash = hashlib.sha256(challenge_str.encode())
-        self.challenge = Bn.from_binary(challenge_hash)
+        self.challenge = hash_challenge(C, pk, self.commitment)
         self.response = [n.mod_sub(self.challenge * e)
                          for n, e in zip(self.noise, exponents)]
+
+    @staticmethod
+    def hash_challenge(C, pk, commitment):
+        challenge_str = jsonpickle.encode([C, pk, self.commitment])
+        challenge_hash = hashlib.sha256(challenge_str.encode())
+        return Bn.from_binary(challenge_hash)
+
+    def verify(self, C, pk):
+        g = G1.generator()
+        challenge = self.hash_challenge(C, pk, self.commitment)
+        commitment = G1.unity()
+        for r in self.response:
+            commitment *= g**r
+
+        for v in values:
+            commitment *= v ** self.challenge
+
+        return commitment == self.commitment
+
 
 class IssueRequest:
     def __init__(self, C, proof: FiatShamirProof):
@@ -196,7 +213,7 @@ class ABCIssue:
         # TODO: Furkan: We pass t as "state" to the obtain credential function, we need to store it somewhere
         return IssueRequest(C, proof), t
 
-    @ staticmethod
+    @staticmethod
     def sign_issue_request(
         sk: SecretKey,
         pk: PublicKey,
@@ -207,7 +224,8 @@ class ABCIssue:
         This corresponds to the "Issuer signing" step in the issuance protocol.
         """
 
-        # TODO Check proof
+        request.proof.verify(C, pk)
+
         u = G1.order().random()
         accum = sk.X1 * request.commitment
         for i, a_i in issuer_attributes.items():
