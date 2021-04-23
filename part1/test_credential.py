@@ -34,9 +34,13 @@ def test_fiat_shamir():
     for Y1_i, a_i in zip(pk.Y1, exponents):
         C *= Y1_i ** a_i
 
+    # Check that verification passes on correct proof
     proof = FiatShamirProof(
         [pk.g1] + pk.Y1,
         [t] + exponents,
         C, pk )
 
-    assert(proof.verify(C, pk))
+    assert proof.verify(C, pk)
+
+    # Check that verification fails on wrong C
+    assert not proof.verify(C**2, pk)
