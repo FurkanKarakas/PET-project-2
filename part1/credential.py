@@ -13,7 +13,8 @@ the functions provided to resemble a more object-oriented interface.
 """
 
 from typing import Any, List, Tuple, Mapping
-from petrelic.multiplicative.pairing import G1, G2, GT
+from petrelic.multiplicative.pairing import G1, G2
+from petrelic.bn import Bn
 from serialization import jsonpickle
 import hashlib
 
@@ -73,8 +74,22 @@ class AnonymousCredential:
         self.sig = sig
 
 
+class FiatShamirProof:
+    def __init__(self, values, exponents, hashme: Any):
+        self.noise = [G1.order.random() for _ in values]
+        self.commitment = G1.unity()
+        for v, n in zip(values, self.noise):
+            self.commitment *= v**n
+
+        challenge_str = jsonpickle.encode(hashme) + jsonpickle.encode(hashme)
+        challenge_hash = hashlib.sha256(challenge_str.encode())
+        self.challenge = Bn.from_binary(challenge_hash)
+        self.response = [n.mod_sub(self.challenge * e)
+                         for n, e in zip(self.noise, exponents)]
+
+
 class IssueRequest:
-    def __init__(self, commitment, proof):
+    def __init__(self, commitment, proof: FiatShamirProof):
         self.commitment = commitment
         self.proof = proof
 
@@ -83,10 +98,11 @@ class Proof:
     def __init__(self, *args: List[Any]):
         argbytes = jsonpickle.encode(args).encode()
         arghash = hashlib.sha256(argbytes)
-        self.proof = arghash.digest()
+        self.value = Bn.from_binary(arghash.digest())
 
     def __eq__(self, other: Any):
         return isinstance(other, Proof) and self.proof == other.proof:
+
 
 class DisclosureProof:
     def __init__(self, signature, attributes, proof):
@@ -162,27 +178,25 @@ class ABCIssue:
         This corresponds to the "user commitment" step in the issuance protocol.
         *Warning:* You may need to pass state to the `obtain_credential` function.
         """
-        user_attributes_ints = [int.from_bytes(a, "big") for a in user_attributes]
+        user_attributes_ints = [int.from_bytes(
+            a, "big") for a in user_attributes.values()]
+        Y1s = [pk.Y1[i] for i in user_attributes.keys()]
+
         # Calculate C
         t = G1.order().random()
         C = pk.g1 ** t
-        for i, a_i in user_attributes.items():
-            C *= pk.Y1[i] ** int.from_bytes(a_i, "big")
+        for Y1_i, a_i in zip(Y1s, user_attributes_ints):
+            C *= Y1_i ** a_i
 
-        # Calculate commitment
-        k = G1.order.random()
-        comm_noise = [G1.order.random() for _ in range(len(attributes))]
-        commitment = pk.g1 ** k
-        for i, c_i in zip(user_attributes.keys(), comm_noise):
-            commitment *= pk.Y1[i] ** c_i
+        proof = FiatShamirProof(
+            [pk.g1] + Y1s,
+            [t] + user_attributes_ints,
+            [C, pk]
+        )
 
-        proof = Proof(C, commitment, pk)
-        response = [e[0].mod_sub(challenge * e[1],G1.order()) for e in zip(comm_values, [t] + hidden_attributes_bn)]
-        response = [c.mod_sub(callenge * int.from_bytes(a_i, "big"))]
+        return IssueRequest(C, proof), t
 
-        return IssueRequest(C, proof, comm_noise)
-
-    @staticmethod
+    @ staticmethod
     def sign_issue_request(
         sk: SecretKey,
         pk: PublicKey,
@@ -199,7 +213,7 @@ class ABCIssue:
             accum *= Y1[i] ** int.from_bytes(a_i, "big")
         return BlindSignature(u, accum)
 
-    @staticmethod
+    @ staticmethod
     def obtain_credential(
         pk: PublicKey,
         response: BlindSignature
@@ -216,7 +230,7 @@ class ABCIssue:
 ## SHOWING PROTOCOL ##
 class ABCVerify:
 
-    @staticmethod
+    @ staticmethod
     def create_disclosure_proof(
         pk: PublicKey,
         credential: AnonymousCredential,
@@ -235,7 +249,7 @@ class ABCVerify:
 
         return DisclosureProof(signature, hidden_attributes, proof)
 
-    @staticmethod
+    @ staticmethod
     def verify_disclosure_proof(
         pk: PublicKey,
         disclosure_proof: DisclosureProof,
