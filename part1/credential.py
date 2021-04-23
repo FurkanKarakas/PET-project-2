@@ -105,7 +105,7 @@ class FiatShamirProof:
 
 class IssueRequest:
     def __init__(self, C, proof: FiatShamirProof):
-        self.C = commitment
+        self.C = C
         self.proof = proof
 
 
@@ -223,24 +223,24 @@ class ABCIssue:
         This corresponds to the "Issuer signing" step in the issuance protocol.
         """
 
-        request.proof.verify(C, pk)
+        assert(request.proof.verify(request.C, pk))
 
         u = G1.order().random()
-        accum = sk.X1 * request.commitment
+        accum = sk.X1 * request.C
         for i, a_i in issuer_attributes.items():
-            accum *= Y1[i] ** int.from_bytes(a_i, "big")
-        return BlindSignature(u, accum)
+            accum *= pk.Y1[i] ** int.from_bytes(a_i, "big")
+        return BlindSignature(pk.g1**u, accum)
 
     @ staticmethod
     def obtain_credential(
         pk: PublicKey,
         response: BlindSignature,
-        t
+        t: Bn
     ) -> AnonymousCredential:
         """ Derive a credential from the issuer's response
         This corresponds to the "Unblinding signature" step.
         """
-        return AnonymousCredential(response.h, response.sig / (response.h ** t))
+        return AnonymousCredential(response.h, response.sig.idiv(response.h ** t))
 
 
 ## SHOWING PROTOCOL ##
@@ -250,7 +250,7 @@ class ABCVerify:
     def create_disclosure_proof(
         pk: PublicKey,
         credential: AnonymousCredential,
-        hidden_attributes: List[Attribute],
+        hidden_attributes: AttributeMap,
         message: bytes
     ) -> DisclosureProof:
         """ Create a disclosure proof """
@@ -260,8 +260,8 @@ class ABCVerify:
             credential.h**r, (credential.sig * credential.h**t)**r)
 
         proof = signature.h.pair(pk.g2)**t
-        for Y2_i, a_i in zip(pk.Y2, hidden_attributes):
-            proof *= signature.h.pair(Y2_i) ** int.from_bytes(a_i, 'big')
+        for i, a_i in hidden_attributes.items():
+            proof *= signature.h.pair(pk.Y2[i]) ** int.from_bytes(a_i, 'big')
 
         return DisclosureProof(signature, hidden_attributes, proof)
 
@@ -269,6 +269,7 @@ class ABCVerify:
     def verify_disclosure_proof(
         pk: PublicKey,
         disclosure_proof: DisclosureProof,
+        disclosed_attributes: AttributeMap,
         message: bytes
     ) -> bool:
         """ Verify the disclosure proof
@@ -278,7 +279,11 @@ class ABCVerify:
 
         if signature.h == G1.unity():
             return False
-        proof = signature.h.pair(pk.g2)**t
-        for Y2_i, a_i in zip(pk.Y2, disclosure_proof.attributes):
-            proof *= signature.h.pair(Y2_i) ** int.from_bytes(a_i, 'big')
+
+        proof = signature.h.pair(pk.g2)
+        for i, a_i in disclosed_attributes.items():
+            proof *= signature.h.pair(pk.Y2[i]
+                                      ) ** (-int.from_bytes(a_i, 'big'))
+        proof /= signature.h.pair(pk.X2)
+
         return proof == disclosure_proof.proof
