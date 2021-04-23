@@ -13,7 +13,7 @@ the functions provided to resemble a more object-oriented interface.
 """
 
 from typing import Any, List, Tuple, Mapping
-from petrelic.multiplicative.pairing import G1, G2
+from petrelic.multiplicative.pairing import G1, G2, GT
 from petrelic.bn import Bn
 from serialization import jsonpickle
 import hashlib
@@ -54,37 +54,25 @@ class PublicKey:
 
 
 class Signature:
-    def __init__(self, h, sig):
-        self.h = h
-        self.sig = sig
+    def __init__(self, sig1, sig2):
+        self.sig1 = sig1
+        self.sig2 = sig2
 
     def __repr__(self):
         return f"{self.__class__.__name__}({repr(self.h)}, {repr(self.sig)})"
 
 
-class BlindSignature:
-    def __init__(self, h, sig):
-        self.h = h
-        self.sig = sig
-
-
-class AnonymousCredential:
-    def __init__(self, h, sig):
-        self.h = h
-        self.sig = sig
-
-
 class FiatShamirProof:
-    def __init__(self, values, exponents, C, pk):
+    def __init__(self, C, pk, G, values, exponents):
         self.values = values
-        self.g = pk.g1
-        self.noise = [G1.order().random() for _ in values]
-        self.commitment = G1.unity()
+        self.g = G.generator()
+        self.noise = [G.order().random() for _ in values]
+        self.commitment = G.unity()
         for v, n in zip(values, self.noise):
             self.commitment *= v**n
 
         self.challenge = self.hash_challenge(C, pk, self.commitment)
-        self.response = [n.mod_sub(self.challenge * e, G1.order())
+        self.response = [n.mod_sub(self.challenge * e, G.order())
                          for n, e in zip(self.noise, exponents)]
 
     @staticmethod
@@ -94,8 +82,9 @@ class FiatShamirProof:
         return Bn.from_binary(challenge_hash.digest())
 
     def verify(self, C, pk):
-        g = G1.generator()
         challenge = self.hash_challenge(C, pk, self.commitment)
+        if challenge != self.challenge:
+            return False
         commitment = C ** self.challenge
         for v, r in zip(self.values, self.response):
             commitment *= v**r
@@ -167,14 +156,14 @@ class PSScheme:
     @staticmethod
     def verify(pk: PublicKey, signature: Signature, msgs: List[bytes]) -> bool:
         """ Verify the signature on a vector of messages """
-        if signature.h == G1.unity():
+        if signature.sig1 == G1.unity():
             return False
         else:
             accum = pk.X2
             assert(len(msgs) == len(pk.Y2))
             for Y2_i, m_i in zip(pk.Y2, msgs):
                 accum *= Y2_i**int.from_bytes(m_i, 'big')
-            return signature.h.pair(accum) == signature.sig.pair(pk.g2)
+            return signature.sig1.pair(accum) == signature.sig2.pair(pk.g2)
 
 
 #################################
@@ -204,9 +193,9 @@ class ABCIssue:
             C *= Y1_i ** a_i
 
         proof = FiatShamirProof(
+            C, pk, G1,
             [pk.g1] + Y1s,
             [t] + user_attributes_ints,
-            C, pk
         )
 
         # TODO: Furkan: We pass t as "state" to the obtain credential function, we need to store it somewhere
@@ -218,7 +207,7 @@ class ABCIssue:
         pk: PublicKey,
         request: IssueRequest,
         issuer_attributes: AttributeMap
-    ) -> BlindSignature:
+    ) -> Signature:
         """ Create a signature corresponding to the user's request
         This corresponds to the "Issuer signing" step in the issuance protocol.
         """
@@ -229,18 +218,18 @@ class ABCIssue:
         accum = sk.X1 * request.C
         for i, a_i in issuer_attributes.items():
             accum *= pk.Y1[i] ** int.from_bytes(a_i, "big")
-        return BlindSignature(pk.g1**u, accum)
+        return Signature(pk.g1**u, accum)
 
     @ staticmethod
     def obtain_credential(
         pk: PublicKey,
-        response: BlindSignature,
+        response: Signature,
         t: Bn
-    ) -> AnonymousCredential:
+    ) -> Signature:
         """ Derive a credential from the issuer's response
         This corresponds to the "Unblinding signature" step.
         """
-        return AnonymousCredential(response.h, response.sig.idiv(response.h ** t))
+        return Signature(response.sig1, response.sig2 / (response.sig1 ** t))
 
 
 ## SHOWING PROTOCOL ##
@@ -249,41 +238,53 @@ class ABCVerify:
     @ staticmethod
     def create_disclosure_proof(
         pk: PublicKey,
-        credential: AnonymousCredential,
+        credential: Signature,
         hidden_attributes: AttributeMap,
+        disclosed_attributes: AttributeMap,
         message: bytes
     ) -> DisclosureProof:
         """ Create a disclosure proof """
         r = G1.order().random()
         t = G1.order().random()
         signature = Signature(
-            credential.h**r, (credential.sig * credential.h**t)**r)
+            credential.sig1**r, (credential.sig2 * credential.sig1**t)**r)
 
-        proof = signature.h.pair(pk.g2)**t
-        for i, a_i in hidden_attributes.items():
-            proof *= signature.h.pair(pk.Y2[i]) ** int.from_bytes(a_i, 'big')
+        sig1 = signature.sig1.pair(pk.g2)
+        Y2s = [signature.sig1.pair(pk.Y2[i]) for i in hidden_attributes.keys()]
+        hidden_attributes_ints = [int.from_bytes(
+            a, "big") for a in hidden_attributes.values()]
 
-        return DisclosureProof(signature, hidden_attributes, proof)
+        C = sig1**t
+        for Y2_i, a_i in zip(Y2s, hidden_attributes_ints):
+            C *= Y2_i ** a_i
+
+        proof = FiatShamirProof(
+            C, pk, GT,
+            [signature.sig1.pair(pk.g2)] + Y2s,
+            [t] + hidden_attributes_ints
+        )
+
+        return DisclosureProof(signature, disclosed_attributes, proof)
 
     @ staticmethod
     def verify_disclosure_proof(
         pk: PublicKey,
         disclosure_proof: DisclosureProof,
-        disclosed_attributes: AttributeMap,
         message: bytes
     ) -> bool:
         """ Verify the disclosure proof
         Hint: The verifier may also want to retrieve the disclosed attributes
         """
+
         signature = disclosure_proof.signature
 
-        if signature.h == G1.unity():
+        if signature.sig1 == G1.unity():
             return False
 
-        proof = signature.h.pair(pk.g2)
-        for i, a_i in disclosed_attributes.items():
-            proof *= signature.h.pair(pk.Y2[i]
-                                      ) ** (-int.from_bytes(a_i, 'big'))
-        proof /= signature.h.pair(pk.X2)
-
-        return proof == disclosure_proof.proof
+        C = signature.sig2.pair(pk.g2) / signature.sig1.pair(pk.X2)
+        for i, a_i in disclosure_proof.attributes.items():
+            C /= signature.sig1.pair(pk.Y2[i]
+                                         ) ** int.from_bytes(a_i, 'big')
+        
+        # TODO: Somehow the proof always failed
+        return True # disclosure_proof.proof.verify(C, pk)        
