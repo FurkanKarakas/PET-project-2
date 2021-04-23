@@ -85,5 +85,4 @@ def test_protocol_run():
     verification = ABCVerify.verify_disclosure_proof(
         pk, disclosure_proof, message)
     
-    print()
-    print(verification)
+    assert(verification)

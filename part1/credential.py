@@ -286,5 +286,5 @@ class ABCVerify:
             C /= signature.sig1.pair(pk.Y2[i]
                                          ) ** int.from_bytes(a_i, 'big')
         
-        # TODO: Somehow the proof always failed
-        return True # disclosure_proof.proof.verify(C, pk)        
+        # TODO: Somehow the proof always fails
+        return disclosure_proof.proof.verify(C, pk)        
