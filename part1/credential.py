@@ -75,22 +75,21 @@ class AnonymousCredential:
 
 
 class FiatShamirProof:
-    def __init__(self, values, exponents, hashme: Any):
+    def __init__(self, values, exponents, C, pk):
         self.noise = [G1.order.random() for _ in values]
         self.commitment = G1.unity()
         for v, n in zip(values, self.noise):
             self.commitment *= v**n
 
-        challenge_str = jsonpickle.encode(hashme) + jsonpickle.encode(hashme)
+        challenge_str = jsonpickle.encode([C, pk, self.commitment])
         challenge_hash = hashlib.sha256(challenge_str.encode())
         self.challenge = Bn.from_binary(challenge_hash)
         self.response = [n.mod_sub(self.challenge * e)
                          for n, e in zip(self.noise, exponents)]
 
-
 class IssueRequest:
-    def __init__(self, commitment, proof: FiatShamirProof):
-        self.commitment = commitment
+    def __init__(self, C, proof: FiatShamirProof):
+        self.C = commitment
         self.proof = proof
 
 
@@ -191,9 +190,10 @@ class ABCIssue:
         proof = FiatShamirProof(
             [pk.g1] + Y1s,
             [t] + user_attributes_ints,
-            [C, pk]
+            C, pk
         )
 
+        # TODO: Furkan: We pass t as "state" to the obtain credential function, we need to store it somewhere
         return IssueRequest(C, proof), t
 
     @ staticmethod
@@ -206,6 +206,7 @@ class ABCIssue:
         """ Create a signature corresponding to the user's request
         This corresponds to the "Issuer signing" step in the issuance protocol.
         """
+
         # TODO Check proof
         u = G1.order().random()
         accum = sk.X1 * request.commitment
@@ -216,14 +217,12 @@ class ABCIssue:
     @ staticmethod
     def obtain_credential(
         pk: PublicKey,
-        response: BlindSignature
+        response: BlindSignature,
+        t
     ) -> AnonymousCredential:
         """ Derive a credential from the issuer's response
         This corresponds to the "Unblinding signature" step.
         """
-        # TODO: Not sure if this should be a fresh t or the same as in create_issue_request
-        t = G1.order().random()
-
         return AnonymousCredential(response.h, response.sig / (response.h ** t))
 
 
@@ -259,7 +258,7 @@ class ABCVerify:
         Hint: The verifier may also want to retrieve the disclosed attributes
         """
         signature = disclosure_proof.signature
-        # TODO: Notes say its sig, but it should probably be sig'
+
         if signature.h == G1.unity():
             return False
         proof = signature.h.pair(pk.g2)**t
