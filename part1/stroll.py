@@ -89,7 +89,6 @@ class Server:
         if not isinstance(sk, SecretKey) or not isinstance(pk, PublicKey):
             raise TypeError("Invalid type provided.")
 
-        subscriptions = subscriptions+[username]
         # Decode the issuance
         issuance = jsonpickle.decode(issuance_request)
 
@@ -98,6 +97,7 @@ class Server:
 
         user_dict: Dict[int, bytes] = dict()
         # Check if attributes are valid and create the user index-attribute dictionary
+        # ? Do we need to handle the username differently?
         for subscription in subscriptions+[username]:
             if subscription not in self.valid_attributes_inverse:
                 raise AttributeError(
