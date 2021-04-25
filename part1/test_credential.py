@@ -49,7 +49,7 @@ def test_fiat_shamir():
 
 
 def test_protocol_run():
-    N = 100
+    N = 10
     # Generate random messages
     attributes = [os.urandom(128) for i in range(N)]
 
@@ -67,7 +67,7 @@ def test_protocol_run():
     hidden_indices = possible_indices - disclosed_indices
     disclosed_attributes = {i: attributes[i] for i in disclosed_indices}
     hidden_attributes = {i: attributes[i] for i in hidden_indices}
-    
+
     # Generate keys
     sk, pk = PSScheme.generate_keys(attributes)
 
@@ -84,5 +84,5 @@ def test_protocol_run():
 
     verification = ABCVerify.verify_disclosure_proof(
         pk, disclosure_proof, message)
-    
+
     assert(verification)

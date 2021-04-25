@@ -148,7 +148,7 @@ class PSScheme:
 
         # pick generator
         h = G1.generator()
-        exponent = sk.x + sum([y_i * int.from_bytes(m_i, 'big')
+        exponent = sk.x + sum([y_i * Bn.from_binary(m_i)
                                for (y_i, m_i) in zip(sk.y, msgs)])
 
         return Signature(h, h**exponent)
@@ -162,7 +162,7 @@ class PSScheme:
             accum = pk.X2
             assert(len(msgs) == len(pk.Y2))
             for Y2_i, m_i in zip(pk.Y2, msgs):
-                accum *= Y2_i**int.from_bytes(m_i, 'big')
+                accum *= Y2_i**Bn.from_binary(m_i)
             return signature.sig1.pair(accum) == signature.sig2.pair(pk.g2)
 
 
@@ -182,8 +182,8 @@ class ABCIssue:
         This corresponds to the "user commitment" step in the issuance protocol.
         *Warning:* You may need to pass state to the `obtain_credential` function.
         """
-        user_attributes_ints = [int.from_bytes(
-            a, "big") for a in user_attributes.values()]
+        user_attributes_ints = [Bn.from_binary(
+            a) for a in user_attributes.values()]
         Y1s = [pk.Y1[i] for i in user_attributes.keys()]
 
         # Calculate C
@@ -215,10 +215,12 @@ class ABCIssue:
         assert(request.proof.verify(request.C, pk))
 
         u = G1.order().random()
+
         accum = sk.X1 * request.C
         for i, a_i in issuer_attributes.items():
-            accum *= pk.Y1[i] ** int.from_bytes(a_i, "big")
-        return Signature(pk.g1**u, accum)
+            accum *= pk.Y1[i] ** Bn.from_binary(a_i)
+
+        return Signature(pk.g1**u, accum**u)
 
     @ staticmethod
     def obtain_credential(
@@ -251,17 +253,16 @@ class ABCVerify:
 
         sig1 = signature.sig1.pair(pk.g2)
         Y2s = [signature.sig1.pair(pk.Y2[i]) for i in hidden_attributes.keys()]
-        hidden_attributes_ints = [int.from_bytes(
-            a, "big") for a in hidden_attributes.values()]
+        a_is = [Bn.from_binary(a) for a in hidden_attributes.values()]
 
-        C = sig1**t
-        for Y2_i, a_i in zip(Y2s, hidden_attributes_ints):
+        C = sig1 ** t
+        for Y2_i, a_i in zip(Y2s, a_is):
             C *= Y2_i ** a_i
 
         proof = FiatShamirProof(
             C, pk, GT,
             [signature.sig1.pair(pk.g2)] + Y2s,
-            [t] + hidden_attributes_ints
+            [t] + a_is
         )
 
         return DisclosureProof(signature, disclosed_attributes, proof)
@@ -281,10 +282,12 @@ class ABCVerify:
         if signature.sig1 == G1.unity():
             return False
 
-        C = signature.sig2.pair(pk.g2) / signature.sig1.pair(pk.X2)
-        for i, a_i in disclosure_proof.attributes.items():
-            C /= signature.sig1.pair(pk.Y2[i]
-                                         ) ** int.from_bytes(a_i, 'big')
-        
-        # TODO: Somehow the proof always fails
-        return disclosure_proof.proof.verify(C, pk)        
+        sig2 = signature.sig2.pair(pk.g2)
+        Y2s = [signature.sig1.pair(pk.Y2[i]) for i in disclosure_proof.attributes.keys()]
+        a_is = [Bn.from_binary(a) for a in disclosure_proof.attributes.values()]
+
+        C = sig2 / signature.sig1.pair(pk.X2)
+        for Y2_i, a_i in zip(Y2s, a_is):
+            C *= Y2_i ** (-a_i)
+
+        return  disclosure_proof.proof.verify(C, pk)
