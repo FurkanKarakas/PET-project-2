@@ -46,9 +46,9 @@ def test_fiat_shamir():
 
     # Check that verification passes on correct proof
     proof = FiatShamirProof(
-        G1, C, pk,
-        [pk.g1] + pk.Y1,
-        [t] + exponents)
+        G1, C, pk,  # type:ignore
+        [pk.g1] + pk.Y1,  # type:ignore
+        [t] + exponents)  # type:ignore
 
     assert proof.verify(C, pk)
 
@@ -101,7 +101,7 @@ def test_abc():
     # Check that disclosure proof with wrong pk fails
     disclosure_proof2 = ABCVerify.create_disclosure_proof(
         pk2, credential, hidden_attributes, disclosed_attributes, message)
-    
+
     verification2 = ABCVerify.verify_disclosure_proof(
         pk2, disclosure_proof, message)
     assert not verification2
