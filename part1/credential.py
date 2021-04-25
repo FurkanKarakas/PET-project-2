@@ -12,7 +12,7 @@ resembles the original scheme definition. However, you are free to restructure
 the functions provided to resemble a more object-oriented interface.
 """
 
-from typing import List, Tuple, Mapping, Union
+from typing import Dict, List, Tuple, Union
 from petrelic.multiplicative.pairing import G1, G2, GT, G1Element, G2Element, GTElement
 from petrelic.bn import Bn
 from serialization import jsonpickle
@@ -22,7 +22,7 @@ import hashlib
 # Attributes
 Attribute = bytes
 # Maps from attribute index to attribute value
-AttributeMap = Mapping[int, Attribute]
+AttributeMap = Dict[int, Attribute]
 
 
 ######################
@@ -78,7 +78,7 @@ class Signature:
         self.sig = sig
 
     def __repr__(self):
-        return f"{self.__class__.__name__}({repr(self.h)}, {repr(self.sig)})"
+        return f"{self.__class__.__name__}({repr(self.gen)}, {repr(self.sig)})"
 
 
 class BlindSignature:
@@ -204,7 +204,7 @@ class PSScheme:
         Y2 = [g2 ** y_i for y_i in y]
 
         # Output public and secret keys
-        pk = PublicKey(g1, Y1, g2, X2, Y2)
+        pk = PublicKey(g1, Y1, g2, X2, Y2)  # type:ignore
         sk = SecretKey(x, X1, y)
         return sk, pk
 
@@ -226,7 +226,7 @@ class PSScheme:
         exponent = sk.x + sum([y_i * Bn.from_binary(m_i)
                                for (y_i, m_i) in zip(sk.y, msgs)])
 
-        return Signature(h, h**exponent)
+        return Signature(h, h**exponent)  # type:ignore
 
     @staticmethod
     def verify(pk: PublicKey, signature: Signature, msgs: List[bytes]) -> bool:
@@ -293,8 +293,8 @@ class ABCIssue:
 
         # Proof that C has been calculated correctly
         proof = FiatShamirProof(
-            G1, C, pk,
-            [pk.g1] + Y1s,
+            G1, C, pk,  # type:ignore
+            [pk.g1] + Y1s,  # type:ignore
             [t] + user_attributes_ints,
         )
 
@@ -307,7 +307,7 @@ class ABCIssue:
         pk: PublicKey,
         request: IssueRequest,
         issuer_attributes: AttributeMap
-    ) -> Signature:
+    ) -> BlindSignature:
         """Create a signature corresponding to the user's request
         This corresponds to the "Issuer signing" step in the issuance protocol.
 
@@ -399,8 +399,8 @@ class ABCVerify:
 
         # Proof that C was calculated correctly
         proof = FiatShamirProof(
-            GT, C, pk,
-            [signature.gen.pair(pk.g2)] + Y2s,
+            GT, C, pk,  # type:ignore
+            [signature.gen.pair(pk.g2)] + Y2s,  # type:ignore
             [t] + a_is
         )
 

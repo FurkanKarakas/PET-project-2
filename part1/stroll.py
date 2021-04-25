@@ -2,9 +2,8 @@
 Classes that you need to complete.
 """
 
-from jsonpickle.backend import JSONBackend
-from credential import ABCIssue, PSScheme, PublicKey, SecretKey
-from typing import Any, Dict, List, Union, Tuple
+from credential import ABCIssue, IssueRequest, PSScheme, PublicKey, SecretKey
+from typing import Any, Dict, List, Tuple
 
 # Optional import
 from serialization import jsonpickle
@@ -47,9 +46,14 @@ class Server:
         ###############################################
         # TODO: Complete this function.
         ###############################################
-        sk, pk = PSScheme.generate_keys(subscriptions)
+        sk, pk = PSScheme.generate_keys(
+            [subscription.encode() for subscription in subscriptions])
         # Save subscriptions as `valid_attributes`
-        cls.valid_attributes = subscriptions
+        cls.valid_attributes: Dict[int, str] = dict()
+        cls.valid_attributes_inverse: Dict[str, int] = dict()
+        for i, subscription in enumerate(subscriptions):
+            cls.valid_attributes[i] = subscription
+            cls.valid_attributes_inverse[subscription] = i
         # jsonpickle.encode() returns a string. So, we encode it again to return a byte array
         # The default .encode() method uses utf-8
         return jsonpickle.encode(sk).encode(), jsonpickle.encode(pk).encode()
@@ -88,14 +92,21 @@ class Server:
         subscriptions = subscriptions+[username]
         # Decode the issuance
         issuance = jsonpickle.decode(issuance_request)
-        # Check if attributes are valid
-        for subscription in subscriptions:
-            if subscription not in self.valid_attributes:
+
+        if not isinstance(issuance, IssueRequest):
+            raise TypeError("Invalid type provided.")
+
+        user_dict: Dict[int, bytes] = dict()
+        # Check if attributes are valid and create the user index-attribute dictionary
+        for subscription in subscriptions+[username]:
+            if subscription not in self.valid_attributes_inverse:
                 raise AttributeError(
                     f"{subscription} is not a valid attribute.")
+            user_dict[self.valid_attributes_inverse[subscription]
+                      ] = subscription.encode()
         # Use the helper function to get the blind signature
         blind_signature = ABCIssue.sign_issue_request(
-            sk, pk, issuance, subscriptions)
+            sk, pk, issuance, user_dict)
         # Encode and return it
         return jsonpickle.encode(blind_signature).encode()
 
@@ -120,7 +131,20 @@ class Server:
         ###############################################
         # TODO: Complete this function.
         ###############################################
-        raise NotImplementedError
+        pk = jsonpickle.decode(server_pk)
+        if not isinstance(pk, PublicKey):
+            raise TypeError("Invalid type provided.")
+        sig = jsonpickle.decode(signature)
+        # if not isinstance(sig,)
+
+        user_attributes: Dict[int, bytes] = dict()
+        # Check if attributes are valid and create the user index-attribute dictionary
+        for subscription in revealed_attributes:
+            if subscription not in self.valid_attributes_inverse:
+                raise AttributeError(
+                    f"{subscription} is not a valid attribute.")
+            user_attributes[self.valid_attributes_inverse[subscription]
+                            ] = subscription.encode()
 
 
 class Client:
