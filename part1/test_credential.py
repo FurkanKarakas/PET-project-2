@@ -86,20 +86,19 @@ def test_abc():
 
     credential = ABCIssue.obtain_credential(pk, response, t)
 
-    message = os.urandom(128)
     disclosure_proof = ABCVerify.create_disclosure_proof(
-        pk, credential, hidden_attributes, disclosed_attributes, message)
+        pk, credential, hidden_attributes, disclosed_attributes)
 
     verification = ABCVerify.verify_disclosure_proof(
-        pk, disclosure_proof, message)
+        pk, disclosure_proof)
 
     assert verification
 
     sk2, pk2 = PSScheme.generate_keys(attributes)
 
     disclosure_proof2 = ABCVerify.create_disclosure_proof(
-        pk2, credential, hidden_attributes, disclosed_attributes, message)
+        pk2, credential, hidden_attributes, disclosed_attributes)
     
     verification2 = ABCVerify.verify_disclosure_proof(
-        pk2, disclosure_proof2, message)
+        pk2, disclosure_proof)
     assert not verification2

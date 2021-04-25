@@ -30,6 +30,13 @@ AttributeMap = Mapping[int, Attribute]
 ######################
 class SecretKey:
     def __init__(self, x: Bn, X1: G1Element, y: List[Bn]):
+        """Secret Key of a Pointcheval-Sanders scheme
+
+        Args:
+            x (Bn): random secret number
+            X1 (G1Element): g1 ^ x
+            y (List[Bn]): list of random, secret numbers
+        """
         self.x = x
         self.X1 = X1
         self.y = y
@@ -40,6 +47,15 @@ class SecretKey:
 
 class PublicKey:
     def __init__(self, g1: G1Element, Y1: List[G1Element], g2: G2Element, X2: G2Element, Y2: List[G2Element]):
+        """Public Key of a Pointcheval-Sanders scheme
+
+        Args:
+            g1 (G1Element): Any Generator of G1
+            Y1 (List[G1Element]): public part of y from SecretKey in G1, g1 ^ y
+            g2 (G2Element): Any Generator of G2
+            X2 (G2Element): public part of x fom SecretKey, g2 ^ x
+            Y2 (List[G2Element]): public part of y from SecretKey in G2, g2 ^ y 
+        """
         self.g1 = g1
         self.Y1 = Y1
         self.g2 = g2
@@ -51,24 +67,49 @@ class PublicKey:
 
 
 class Signature:
-    def __init__(self, sig1: G1Element, sig2: G1Element):
-        self.sig1 = sig1
-        self.sig2 = sig2
+    def __init__(self, gen: G1Element, sig: G1Element):
+        """Signature of PS ABC scheme
+
+        Args:
+            gen (G1Element): A randomized generator, g^r where r is a randomly chosen value
+            sig (G1Element): The signature some value x, with sig=g^(r*x)
+        """
+        self.gen = gen
+        self.sig = sig
 
     def __repr__(self):
         return f"{self.__class__.__name__}({repr(self.h)}, {repr(self.sig)})"
 
 
-class FiatShamirProof:
-    def __init__(self, C: Any, pk: PublicKey, G: Any, values: List[Any], exponents: List[Bn]):
-        """Fiat shamir proof, G is either G1, G2 or GT and C is an element of G.
-        """
+class BlindSignature:
+    def __init__(self, signature: Signature, issuer_attributes: AttributeMap):
+        """Signature of Issuer over user and issuer attributes
 
-        self.values = values
-        noise = [G.order().random() for _ in values]
+        Args:
+            signature (Signature): Signature of user and issuer attributes
+            issuer_attributes (AttributeMap): issuer attributes
+        """
+        self.signature = signature
+        self.issuer_attributes = issuer_attributes
+
+
+class FiatShamirProof:
+    def __init__(self, G: Any, C: Any, pk: PublicKey, bases: List[Any], exponents: List[Bn]):
+        """Fiat shamir non-interactive to show, that we calculated 
+        C = bases[0]**exponents[0] * ... * bases[n]**exponents[n] correctly
+
+        Args:
+            G (one of G1, G2 or GT): The group this proof works on
+            C (a Group Element of G): The result we want to proof correctness of
+            pk (PublicKey): Public Key of the PS Scheme
+            bases (List[Any]): Bases used to caclulate C
+            exponents (List[Bn]): Exponents used to calculate C
+        """
+        self.bases = bases
+        noise = [G.order().random() for _ in bases]
 
         self.commitment = G.unity()
-        for v, n in zip(values, noise):
+        for v, n in zip(bases, noise):
             self.commitment *= v**n
 
         self.challenge = self.create_hash(C, pk, self.commitment)
@@ -76,12 +117,26 @@ class FiatShamirProof:
                          for n, e in zip(noise, exponents)]
 
     @staticmethod
-    def create_hash(C: Any, pk:PublicKey, commitment:Bn):
-        challenge_str = jsonpickle.encode([C, pk, commitment])
+    def create_hash(*args):
+        """Creates a hash from the passed arguments
+
+        Returns:
+            Bn: A Bn representing the hashed value of the passed arguments
+        """
+        challenge_str = jsonpickle.encode(args)
         challenge_hash = hashlib.sha256(challenge_str.encode())
         return Bn.from_binary(challenge_hash.digest())
 
-    def verify(self, C:Any, pk:PublicKey):
+    def verify(self, C: Any, pk: PublicKey):
+        """Verifies the proof with any C and pk
+
+        Args:
+            C (One of G1Element, G2Element or GTElement): The C we want to verify
+            pk (PublicKey): Public Key of ABC Scheme
+
+        Returns:
+            bool: True iff the prove could be verified, False otherwises
+        """
         # Check if the challenge matches
         challenge = self.create_hash(C, pk, self.commitment)
         if challenge != self.challenge:
@@ -89,20 +144,33 @@ class FiatShamirProof:
 
         # Check if commitment matches
         commitment = C ** challenge
-        for v, r in zip(self.values, self.response):
+        for v, r in zip(self.bases, self.response):
             commitment *= v**r
 
         return commitment == self.commitment
 
 
 class IssueRequest:
-    def __init__(self, C:G1Element, proof: FiatShamirProof):
+    def __init__(self, C: G1Element, proof: FiatShamirProof):
+        """Request from user to issuer to specify which user attributes they want to include
+
+        Args:
+            C (G1Element): Calculated with attributes user wants to include according to User commitment step
+            proof (FiatShamirProof): Proof that C was calculated correctly
+        """
         self.C = C
         self.proof = proof
 
 
 class DisclosureProof:
-    def __init__(self, signature:Signature, disclosed_attributes:AttributeMap, proof: FiatShamirProof):
+    def __init__(self, signature: Signature, disclosed_attributes: AttributeMap, proof: FiatShamirProof):
+        """Proof which attributes should be disclosed to the verifier
+
+        Args:
+            signature (Signature): randomized signature over all attributes
+            disclosed_attributes (AttributeMap): All attributes that should be disclosed to the verifier
+            proof (FiatShamirProof): Non-interactive proof to show that randomized signature is valid
+        """
         self.signature = signature
         self.disclosed_attributes = disclosed_attributes
         self.proof = proof
@@ -113,8 +181,14 @@ class PSScheme:
 
     @staticmethod
     def generate_keys(attributes: List[Attribute]) -> Tuple[SecretKey, PublicKey]:
-        """ Generate signer key pair """
+        """Generate signer key pair
 
+        Args:
+            attributes (List[Attribute]): The attributes for which the key pair should be generated
+
+        Returns:
+            Tuple[SecretKey, PublicKey]: Secret andpPublic keys for given attributes
+        """
         # Pick uniformly random variables
         x = G1.order().random()
         y = [G1.order().random() for _ in range(len(attributes))]
@@ -136,7 +210,15 @@ class PSScheme:
 
     @staticmethod
     def sign(sk: SecretKey, msgs: List[bytes]) -> Signature:
-        """ Sign the vector of messages `msgs` """
+        """Sign the vector of messages `msgs`
+
+        Args:
+            sk (SecretKey): Secret Key of PSScheme
+            msgs (List[bytes]): Vector of messages that are to be signed
+
+        Returns:
+            Signature: Signature of these messages
+        """
         assert(len(msgs) == len(sk.y))
 
         # pick generator
@@ -148,34 +230,58 @@ class PSScheme:
 
     @staticmethod
     def verify(pk: PublicKey, signature: Signature, msgs: List[bytes]) -> bool:
-        """ Verify the signature on a vector of messages """
-        if signature.sig1 == G1.unity():
+        """Verify the signature on a vector of messages
+
+        Args:
+            pk (PublicKey): Public Key of PS Scheme
+            signature (Signature): Signature to verify
+            msgs (List[bytes]): Vector of messages which are claimed to be signed by the signature
+
+        Returns:
+            bool: True iff signature is valid, false otherwise
+        """
+        if signature.gen == G1.unity():
             return False
         else:
             accum = pk.X2
             assert(len(msgs) == len(pk.Y2))
             for Y2_i, m_i in zip(pk.Y2, msgs):
                 accum *= Y2_i**Bn.from_binary(m_i)
-            return signature.sig1.pair(accum) == signature.sig2.pair(pk.g2)
+            return signature.gen.pair(accum) == signature.sig.pair(pk.g2)
 
 
 #################################
 ## ATTRIBUTE-BASED CREDENTIALS ##
 #################################
 
+        """ Create an issuance request
+        This corresponds to the "user commitment" step in the issuance protocol.
+        *Warning:* You may need to pass state to the `obtain_credential` function.
+        """
+
 ## ISSUANCE PROTOCOL ##
+
+
 class ABCIssue:
 
     @staticmethod
     def create_issue_request(
         pk: PublicKey,
         user_attributes: AttributeMap
-    ) -> IssueRequest:
-        """ Create an issuance request
+    ) -> Tuple[IssueRequest, Bn]:
+        """Create an issuance request
         This corresponds to the "user commitment" step in the issuance protocol.
-        *Warning:* You may need to pass state to the `obtain_credential` function.
+
+        Args:
+            pk (PublicKey): Public Key of PS Scheme
+            user_attributes (AttributeMap): Attributes belonging to the user
+
+        Returns:
+            Tuple[IssueRequest, Bn]: Request specifying which Attributs belong to the user,
+                                     as well as the random t which the user needs again later.
         """
-        user_attributes_ints = [Bn.from_binary(a) for a in user_attributes.values()]
+        user_attributes_ints = [Bn.from_binary(
+            a) for a in user_attributes.values()]
         Y1s = [pk.Y1[i] for i in user_attributes.keys()]
 
         # Calculate C
@@ -185,12 +291,12 @@ class ABCIssue:
             C *= Y1_i ** a_i
 
         proof = FiatShamirProof(
-            C, pk, G1,
+            G1, C, pk,
             [pk.g1] + Y1s,
             [t] + user_attributes_ints,
         )
 
-        # TODO: Furkan: We pass t as "state" to the obtain credential function, we need to store it somewhere
+        # TODO: Furkan: We pass t as "state" to the obtain credential function, you need to pass it to obtain_credential again
         return IssueRequest(C, proof), t
 
     @staticmethod
@@ -200,10 +306,18 @@ class ABCIssue:
         request: IssueRequest,
         issuer_attributes: AttributeMap
     ) -> Signature:
-        """ Create a signature corresponding to the user's request
+        """Create a signature corresponding to the user's request
         This corresponds to the "Issuer signing" step in the issuance protocol.
-        """
 
+        Args:
+            sk (SecretKey): Secret Key of PS Scheme
+            pk (PublicKey): Public Key of PS Scheme
+            request (IssueRequest): Requested attributes of user
+            issuer_attributes (AttributeMap): Attributes belonging to issuer
+
+        Returns:
+            Signature: Signature 
+        """
         assert(request.proof.verify(request.C, pk))
 
         u = G1.order().random()
@@ -212,39 +326,59 @@ class ABCIssue:
         for i, a_i in issuer_attributes.items():
             accum *= pk.Y1[i] ** Bn.from_binary(a_i)
 
-        return Signature(pk.g1 ** u, accum ** u)
+        signature = Signature(pk.g1 ** u, accum ** u)
+        return BlindSignature(signature, issuer_attributes)
 
     @ staticmethod
     def obtain_credential(
         pk: PublicKey,
-        response: Signature,
+        response: BlindSignature,
         t: Bn
     ) -> Signature:
-        """ Derive a credential from the issuer's response
+        """Derive a credential from the issuer's response
         This corresponds to the "Unblinding signature" step.
+
+        Args:
+            pk (PublicKey): Public Key of PS Scheme
+            response (BlindSignature): Blind Signature of Issuer over user and issuer attributes
+            t (Bn): Random number from create_issue_request
+
+        Returns:
+            Signature: Final, unblinded signature over attributes
         """
-        return Signature(response.sig1, response.sig2 / (response.sig1 ** t))
+
+        # TODO: Check blind signature
+
+        return Signature(response.signature.gen, response.signature.sig / (response.signature.gen ** t))
 
 
 ## SHOWING PROTOCOL ##
 class ABCVerify:
-
     @ staticmethod
     def create_disclosure_proof(
         pk: PublicKey,
-        credential: Signature,
+        signature: Signature,
         hidden_attributes: AttributeMap,
-        disclosed_attributes: AttributeMap,
-        message: bytes
+        disclosed_attributes: AttributeMap
     ) -> DisclosureProof:
-        """ Create a disclosure proof """
+        """Create a disclosure proof
+
+        Args:
+            pk (PublicKey): Public Key of PS Scheme
+            signature (Signature): Signature over all attributes
+            hidden_attributes (AttributeMap): Attributes that are to be hidden from verifier
+            disclosed_attributes (AttributeMap): All attributes not in hidden_attributes
+
+        Returns:
+            DisclosureProof: Proof that both parties agree on which arguments are disclosed
+        """
         r = G1.order().random()
         t = G1.order().random()
         signature = Signature(
-            credential.sig1**r, (credential.sig2 * credential.sig1**t)**r)
+            signature.gen**r, (signature.sig * signature.gen**t)**r)
 
-        sig1 = signature.sig1.pair(pk.g2)
-        Y2s = [signature.sig1.pair(pk.Y2[i]) for i in hidden_attributes.keys()]
+        sig1 = signature.gen.pair(pk.g2)
+        Y2s = [signature.gen.pair(pk.Y2[i]) for i in hidden_attributes.keys()]
         a_is = [Bn.from_binary(a) for a in hidden_attributes.values()]
 
         C = sig1 ** t
@@ -252,8 +386,8 @@ class ABCVerify:
             C *= Y2_i ** a_i
 
         proof = FiatShamirProof(
-            C, pk, GT,
-            [signature.sig1.pair(pk.g2)] + Y2s,
+            GT, C, pk,
+            [signature.gen.pair(pk.g2)] + Y2s,
             [t] + a_is
         )
 
@@ -262,26 +396,31 @@ class ABCVerify:
     @ staticmethod
     def verify_disclosure_proof(
         pk: PublicKey,
-        disclosure_proof: DisclosureProof,
-        message: bytes
+        disclosure_proof: DisclosureProof
     ) -> bool:
-        """ Verify the disclosure proof
-        Hint: The verifier may also want to retrieve the disclosed attributes
+        """Verify the disclosure proof
+
+        Args:
+            pk (PublicKey): Public Key of PS scheme
+            disclosure_proof (DisclosureProof): Proof that both parties agree on which arguments are disclosed
+
+        Returns:
+            bool: True iff the disclosure proof could be verified, False otherwise
         """
 
         signature = disclosure_proof.signature
         disclosed_attributes = disclosure_proof.disclosed_attributes
 
-        if signature.sig1 == G1.unity():
+        if signature.gen == G1.unity():
             return False
 
-        sig2 = signature.sig2.pair(pk.g2)
-        Y2s = [signature.sig1.pair(pk.Y2[i])
+        sig2 = signature.sig.pair(pk.g2)
+        Y2s = [signature.gen.pair(pk.Y2[i])
                for i in disclosed_attributes.keys()]
         a_is = [Bn.from_binary(a)
                 for a in disclosed_attributes.values()]
 
-        C = sig2 / signature.sig1.pair(pk.X2)
+        C = sig2 / signature.gen.pair(pk.X2)
         for Y2_i, a_i in zip(Y2s, a_is):
             C *= Y2_i ** (-a_i)
 
