@@ -7,21 +7,29 @@ import os
 import random
 
 
-def test_scheme():
+def test_ps_scheme():
+    """Test PS Scheme
+    """
     # Generate random messages
     msgs = [os.urandom(128) for i in range(100)]
 
     # Generate keys
-    sk, pk = PSScheme.generate_keys(msgs)
+    sk1, pk1 = PSScheme.generate_keys(msgs)
+    sk2, pk2 = PSScheme.generate_keys(msgs)
 
     # Sign messages
-    signature = PSScheme.sign(sk, msgs)
+    signature = PSScheme.sign(sk1, msgs)
 
-    # Verify signature
-    assert PSScheme.verify(pk, signature, msgs)
+    # Verify signature is valid with correct pk
+    assert PSScheme.verify(pk1, signature, msgs)
+
+    # Verify signature is invalid with wrong pk
+    assert not PSScheme.verify(pk2, signature, msgs)
 
 
 def test_fiat_shamir():
+    """Test Fiat Shamir proof when verification should succeed
+    """
     # Generate random messages
     msgs = [os.urandom(128) for i in range(100)]
 
@@ -38,7 +46,7 @@ def test_fiat_shamir():
 
     # Check that verification passes on correct proof
     proof = FiatShamirProof(
-        C, pk, G1,
+        G1, C, pk,
         [pk.g1] + pk.Y1,
         [t] + exponents)
 
@@ -48,7 +56,7 @@ def test_fiat_shamir():
     assert not proof.verify(C**2, pk)
 
 
-def test_protocol_run():
+def test_abc():
     N = 10
     # Generate random messages
     attributes = [os.urandom(128) for i in range(N)]
@@ -85,4 +93,13 @@ def test_protocol_run():
     verification = ABCVerify.verify_disclosure_proof(
         pk, disclosure_proof, message)
 
-    assert(verification)
+    assert verification
+
+    sk2, pk2 = PSScheme.generate_keys(attributes)
+
+    disclosure_proof2 = ABCVerify.create_disclosure_proof(
+        pk2, credential, hidden_attributes, disclosed_attributes, message)
+    
+    verification2 = ABCVerify.verify_disclosure_proof(
+        pk2, disclosure_proof2, message)
+    assert not verification2
