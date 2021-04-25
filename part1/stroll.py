@@ -188,6 +188,10 @@ class Client:
         ###############################################
         # TODO: Complete this function.
         ###############################################
+
+        self.chosen_attributes = {i: subscription for i, subscription in self.valid_attributes.items(
+        ) if subscription in subscriptions}
+
         pk = jsonpickle.decode(server_pk)
         if not isinstance(pk, PublicKey):
             raise TypeError("Invalid type provided.")
@@ -195,6 +199,8 @@ class Client:
         # Create user dictionary based on the subscriptions
         user_dict: Dict[int, bytes] = {
             self.valid_attributes_inverse[subscription]: subscription.encode() for subscription in subscriptions}
+        # Also add the username
+        user_dict[self.valid_attributes_inverse[username]] = username.encode()
         issue_request, t = ABCIssue.create_issue_request(pk, user_dict)
         return jsonpickle.encode(issue_request).encode(), t
 
@@ -225,7 +231,7 @@ class Client:
         if not isinstance(response, BlindSignature):
             raise TypeError("Invalid type provided.")
         attributes = sorted(
-            list(self.valid_attributes.items()), key=lambda x: x[0])
+            list(self.chosen_attributes.items()), key=lambda x: x[0])
         valid_attributes = [x[1].encode() for x in attributes]
         sig = ABCIssue.obtain_credential(
             pk, valid_attributes, response, private_state)

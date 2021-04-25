@@ -244,7 +244,8 @@ class PSScheme:
         if signature.gen == G1.unity():
             return False
         else:
-            assert(len(msgs) == len(pk.Y2))
+            assert(len(msgs) == len(pk.Y2)
+                   ), f"Message length: {len(msgs)}, pk.Y2 length: {len(pk.Y2)}"
             accum = pk.X2
             for Y2_i, m_i in zip(pk.Y2, msgs):
                 accum = accum * Y2_i**Bn.from_binary(m_i)
@@ -442,5 +443,5 @@ class ABCVerify:
         for Y2_i, a_i in zip(Y2s, a_is):
             C = C * Y2_i ** (-a_i)
         C = C * GT.generator() ** Bn.from_binary(message)
-        
+
         return disclosure_proof.proof.verify(C, pk)
