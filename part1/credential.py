@@ -12,8 +12,8 @@ resembles the original scheme definition. However, you are free to restructure
 the functions provided to resemble a more object-oriented interface.
 """
 
-from typing import Any, List, Tuple, Mapping
-from petrelic.multiplicative.pairing import G1, G2, GT, G1Element, G2Element
+from typing import List, Tuple, Mapping, Union
+from petrelic.multiplicative.pairing import G1, G2, GT, G1Element, G2Element, GTElement
 from petrelic.bn import Bn
 from serialization import jsonpickle
 import hashlib
@@ -94,15 +94,15 @@ class BlindSignature:
 
 
 class FiatShamirProof:
-    def __init__(self, G: Any, C: Any, pk: PublicKey, bases: List[Any], exponents: List[Bn]):
+    def __init__(self, G: Union[G1, G2, GT], C: Union[G1Element, G2Element, GTElement], pk: PublicKey, bases: List[Union[G1Element, G2Element, GTElement]], exponents: List[Bn]):
         """Fiat shamir non-interactive to show, that we calculated 
         C = bases[0]**exponents[0] * ... * bases[n]**exponents[n] correctly
 
         Args:
-            G (one of G1, G2 or GT): The group this proof works on
-            C (a Group Element of G): The result we want to proof correctness of
+            G (Union[G1, G2, GT]): The group this proof works on
+            C (Union[G1Element, G2Element, GTElement]): Element of group G, The result we want to proof correctness of
             pk (PublicKey): Public Key of the PS Scheme
-            bases (List[Any]): Bases used to caclulate C
+            bases (List[Union[G1Element, G2Element, GTElement]]): Elements of group G, Bases used to caclulate C
             exponents (List[Bn]): Exponents used to calculate C
         """
         self.bases = bases
@@ -127,11 +127,11 @@ class FiatShamirProof:
         challenge_hash = hashlib.sha256(challenge_str.encode())
         return Bn.from_binary(challenge_hash.digest())
 
-    def verify(self, C: Any, pk: PublicKey):
+    def verify(self, C: Union[G1Element, G2Element, GTElement], pk: PublicKey):
         """Verifies the proof with any C and pk
 
         Args:
-            C (One of G1Element, G2Element or GTElement): The C we want to verify
+            C (Union[G1Element, G2Element, GTElement]): The C we want to verify
             pk (PublicKey): Public Key of ABC Scheme
 
         Returns:
