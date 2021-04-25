@@ -369,7 +369,8 @@ class ABCVerify:
         pk: PublicKey,
         signature: Signature,
         hidden_attributes: AttributeMap,
-        disclosed_attributes: AttributeMap
+        disclosed_attributes: AttributeMap,
+        message: bytes
     ) -> DisclosureProof:
         """Create a disclosure proof
 
@@ -394,14 +395,15 @@ class ABCVerify:
         a_is = [Bn.from_binary(a) for a in hidden_attributes.values()]
 
         C = sig1 ** t
+        C = C * GT.generator() ** Bn.from_binary(message)
         for Y2_i, a_i in zip(Y2s, a_is):
             C = C * Y2_i ** a_i
 
         # Proof that C was calculated correctly
         proof = FiatShamirProof(
             GT, C, pk,  # type:ignore
-            [signature.gen.pair(pk.g2)] + Y2s,  # type:ignore
-            [t] + a_is
+            [signature.gen.pair(pk.g2),  GT.generator()] + Y2s,  # type:ignore
+            [t, Bn.from_binary(message)] + a_is
         )
 
         return DisclosureProof(signature, disclosed_attributes, proof)
@@ -409,7 +411,8 @@ class ABCVerify:
     @ staticmethod
     def verify_disclosure_proof(
         pk: PublicKey,
-        disclosure_proof: DisclosureProof
+        disclosure_proof: DisclosureProof,
+        message: bytes
     ) -> bool:
         """Verify the disclosure proof
 
@@ -438,5 +441,6 @@ class ABCVerify:
         C = sig2 / signature.gen.pair(pk.X2)
         for Y2_i, a_i in zip(Y2s, a_is):
             C = C * Y2_i ** (-a_i)
-
+        C = C * GT.generator() ** Bn.from_binary(message)
+        
         return disclosure_proof.proof.verify(C, pk)

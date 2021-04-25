@@ -86,19 +86,28 @@ def test_abc():
 
     credential = ABCIssue.obtain_credential(pk, attributes, response, t)
 
+    # Create random message
+    message = os.urandom(128)
+
+    # Check that correct disclosure proof verifies
     disclosure_proof = ABCVerify.create_disclosure_proof(
-        pk, credential, hidden_attributes, disclosed_attributes)
-
+        pk, credential, hidden_attributes, disclosed_attributes, message)
     verification = ABCVerify.verify_disclosure_proof(
-        pk, disclosure_proof)
-
+        pk, disclosure_proof, message)
     assert verification
 
     sk2, pk2 = PSScheme.generate_keys(attributes)
 
+    # Check that disclosure proof with wrong pk fails
     disclosure_proof2 = ABCVerify.create_disclosure_proof(
-        pk2, credential, hidden_attributes, disclosed_attributes)
+        pk2, credential, hidden_attributes, disclosed_attributes, message)
     
     verification2 = ABCVerify.verify_disclosure_proof(
-        pk2, disclosure_proof)
+        pk2, disclosure_proof, message)
     assert not verification2
+
+    # Check that disclosure proof with wrong message fails
+    message2 = os.urandom(128)
+    verification3 = ABCVerify.verify_disclosure_proof(
+        pk, disclosure_proof, message2)
+    assert not verification3
