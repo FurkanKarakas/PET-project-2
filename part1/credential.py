@@ -19,7 +19,7 @@ from serialization import jsonpickle
 import hashlib
 
 
-# Attributes are just data
+# Attributes
 Attribute = bytes
 # Maps from attribute index to attribute value
 AttributeMap = Mapping[int, Attribute]
@@ -240,13 +240,14 @@ class PSScheme:
         Returns:
             bool: True iff signature is valid, false otherwise
         """
+        # Check that generator is not 1
         if signature.gen == G1.unity():
             return False
         else:
-            accum = pk.X2
             assert(len(msgs) == len(pk.Y2))
+            accum = pk.X2
             for Y2_i, m_i in zip(pk.Y2, msgs):
-                accum *= Y2_i**Bn.from_binary(m_i)
+                accum = accum * Y2_i**Bn.from_binary(m_i)
             return signature.gen.pair(accum) == signature.sig.pair(pk.g2)
 
 
@@ -290,13 +291,14 @@ class ABCIssue:
         for Y1_i, a_i in zip(Y1s, user_attributes_ints):
             C *= Y1_i ** a_i
 
+        # Proof that C has been calculated correctly
         proof = FiatShamirProof(
             G1, C, pk,
             [pk.g1] + Y1s,
             [t] + user_attributes_ints,
         )
 
-        # TODO: Furkan: We pass t as "state" to the obtain credential function, you need to pass it to obtain_credential again
+        # TODO: Furkan: We pass t as "state" to the obtain credential function, you need to store it and pass it to obtain_credential again
         return IssueRequest(C, proof), t
 
     @staticmethod
@@ -318,13 +320,14 @@ class ABCIssue:
         Returns:
             Signature: Signature 
         """
+        # Verify that C has been calculated correctly
         assert(request.proof.verify(request.C, pk))
 
+        # Sign issuer attributes
         u = G1.order().random()
-
         accum = sk.X1 * request.C
         for i, a_i in issuer_attributes.items():
-            accum *= pk.Y1[i] ** Bn.from_binary(a_i)
+            accum = accum * pk.Y1[i] ** Bn.from_binary(a_i)
 
         signature = Signature(pk.g1 ** u, accum ** u)
         return BlindSignature(signature, issuer_attributes)
@@ -332,6 +335,7 @@ class ABCIssue:
     @ staticmethod
     def obtain_credential(
         pk: PublicKey,
+        attributes: List[Attribute],
         response: BlindSignature,
         t: Bn
     ) -> Signature:
@@ -340,16 +344,22 @@ class ABCIssue:
 
         Args:
             pk (PublicKey): Public Key of PS Scheme
+            attributes (List[Attribute]): All attributes of issuer and user combined
             response (BlindSignature): Blind Signature of Issuer over user and issuer attributes
             t (Bn): Random number from create_issue_request
 
         Returns:
             Signature: Final, unblinded signature over attributes
         """
+        # Unblind signature
+        unblinded_signature = Signature(
+            response.signature.gen, response.signature.sig / (response.signature.gen ** t))
 
-        # TODO: Check blind signature
+        # Check that signature is valid
+        assert PSScheme.verify(pk, unblinded_signature, attributes)
 
-        return Signature(response.signature.gen, response.signature.sig / (response.signature.gen ** t))
+        # Return unblinded signature
+        return unblinded_signature
 
 
 ## SHOWING PROTOCOL ##
@@ -372,19 +382,22 @@ class ABCVerify:
         Returns:
             DisclosureProof: Proof that both parties agree on which arguments are disclosed
         """
+        # Randomize signature
         r = G1.order().random()
         t = G1.order().random()
         signature = Signature(
             signature.gen**r, (signature.sig * signature.gen**t)**r)
 
+        # Calculate proof over hidden attributes (right hand side of showing protocol 2b)
         sig1 = signature.gen.pair(pk.g2)
         Y2s = [signature.gen.pair(pk.Y2[i]) for i in hidden_attributes.keys()]
         a_is = [Bn.from_binary(a) for a in hidden_attributes.values()]
 
         C = sig1 ** t
         for Y2_i, a_i in zip(Y2s, a_is):
-            C *= Y2_i ** a_i
+            C = C * Y2_i ** a_i
 
+        # Proof that C was calculated correctly
         proof = FiatShamirProof(
             GT, C, pk,
             [signature.gen.pair(pk.g2)] + Y2s,
@@ -411,9 +424,11 @@ class ABCVerify:
         signature = disclosure_proof.signature
         disclosed_attributes = disclosure_proof.disclosed_attributes
 
+        # Check that the signature generator is not 1
         if signature.gen == G1.unity():
             return False
 
+        # Calculate proof over disclosed attributes (left hand side of showing protocol 2b)
         sig2 = signature.sig.pair(pk.g2)
         Y2s = [signature.gen.pair(pk.Y2[i])
                for i in disclosed_attributes.keys()]
@@ -422,6 +437,6 @@ class ABCVerify:
 
         C = sig2 / signature.gen.pair(pk.X2)
         for Y2_i, a_i in zip(Y2s, a_is):
-            C *= Y2_i ** (-a_i)
+            C = C * Y2_i ** (-a_i)
 
         return disclosure_proof.proof.verify(C, pk)

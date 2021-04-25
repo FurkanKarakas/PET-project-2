@@ -84,7 +84,7 @@ def test_abc():
 
     response = ABCIssue.sign_issue_request(sk, pk, request, issuer_attributes)
 
-    credential = ABCIssue.obtain_credential(pk, response, t)
+    credential = ABCIssue.obtain_credential(pk, attributes, response, t)
 
     disclosure_proof = ABCVerify.create_disclosure_proof(
         pk, credential, hidden_attributes, disclosed_attributes)
