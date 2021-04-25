@@ -13,26 +13,23 @@ the functions provided to resemble a more object-oriented interface.
 """
 
 from typing import Any, List, Tuple, Mapping
-from petrelic.multiplicative.pairing import G1, G2, GT
+from petrelic.multiplicative.pairing import G1, G2, GT, G1Element, G2Element
 from petrelic.bn import Bn
 from serialization import jsonpickle
 import hashlib
 
 
-# Type hint aliases
-# Feel free to change them as you see fit.
-# Maybe at the end, you will not need aliases at all!
+# Attributes are just data
 Attribute = bytes
+# Maps from attribute index to attribute value
 AttributeMap = Mapping[int, Attribute]
-DisclosureProof = Any
 
 
 ######################
 ## SIGNATURE SCHEME ##
 ######################
-
 class SecretKey:
-    def __init__(self, x, X1, y):
+    def __init__(self, x: Bn, X1: G1Element, y: List[Bn]):
         self.x = x
         self.X1 = X1
         self.y = y
@@ -42,7 +39,7 @@ class SecretKey:
 
 
 class PublicKey:
-    def __init__(self, g1, Y1, g2, X2, Y2):
+    def __init__(self, g1: G1Element, Y1: List[G1Element], g2: G2Element, X2: G2Element, Y2: List[G2Element]):
         self.g1 = g1
         self.Y1 = Y1
         self.g2 = g2
@@ -54,7 +51,7 @@ class PublicKey:
 
 
 class Signature:
-    def __init__(self, sig1, sig2):
+    def __init__(self, sig1: G1Element, sig2: G1Element):
         self.sig1 = sig1
         self.sig2 = sig2
 
@@ -63,29 +60,35 @@ class Signature:
 
 
 class FiatShamirProof:
-    def __init__(self, C, pk, G, values, exponents):
+    def __init__(self, C: Any, pk: PublicKey, G: Any, values: List[Any], exponents: List[Bn]):
+        """Fiat shamir proof, G is either G1, G2 or GT and C is an element of G.
+        """
+
         self.values = values
-        self.g = G.generator()
-        self.noise = [G.order().random() for _ in values]
+        noise = [G.order().random() for _ in values]
+
         self.commitment = G.unity()
-        for v, n in zip(values, self.noise):
+        for v, n in zip(values, noise):
             self.commitment *= v**n
 
-        self.challenge = self.hash_challenge(C, pk, self.commitment)
+        self.challenge = self.create_hash(C, pk, self.commitment)
         self.response = [n.mod_sub(self.challenge * e, G.order())
-                         for n, e in zip(self.noise, exponents)]
+                         for n, e in zip(noise, exponents)]
 
     @staticmethod
-    def hash_challenge(C, pk, commitment):
+    def create_hash(C: Any, pk:PublicKey, commitment:Bn):
         challenge_str = jsonpickle.encode([C, pk, commitment])
         challenge_hash = hashlib.sha256(challenge_str.encode())
         return Bn.from_binary(challenge_hash.digest())
 
-    def verify(self, C, pk):
-        challenge = self.hash_challenge(C, pk, self.commitment)
+    def verify(self, C:Any, pk:PublicKey):
+        # Check if the challenge matches
+        challenge = self.create_hash(C, pk, self.commitment)
         if challenge != self.challenge:
             return False
-        commitment = C ** self.challenge
+
+        # Check if commitment matches
+        commitment = C ** challenge
         for v, r in zip(self.values, self.response):
             commitment *= v**r
 
@@ -93,25 +96,15 @@ class FiatShamirProof:
 
 
 class IssueRequest:
-    def __init__(self, C, proof: FiatShamirProof):
+    def __init__(self, C:G1Element, proof: FiatShamirProof):
         self.C = C
         self.proof = proof
 
 
-class Proof:
-    def __init__(self, *args: List[Any]):
-        argbytes = jsonpickle.encode(args).encode()
-        arghash = hashlib.sha256(argbytes)
-        self.value = Bn.from_binary(arghash.digest())
-
-    def __eq__(self, other: Any):
-        return isinstance(other, Proof) and self.proof == other.proof
-
-
 class DisclosureProof:
-    def __init__(self, signature, attributes, proof):
+    def __init__(self, signature:Signature, disclosed_attributes:AttributeMap, proof: FiatShamirProof):
         self.signature = signature
-        self.attributes = attributes
+        self.disclosed_attributes = disclosed_attributes
         self.proof = proof
 
 
@@ -182,8 +175,7 @@ class ABCIssue:
         This corresponds to the "user commitment" step in the issuance protocol.
         *Warning:* You may need to pass state to the `obtain_credential` function.
         """
-        user_attributes_ints = [Bn.from_binary(
-            a) for a in user_attributes.values()]
+        user_attributes_ints = [Bn.from_binary(a) for a in user_attributes.values()]
         Y1s = [pk.Y1[i] for i in user_attributes.keys()]
 
         # Calculate C
@@ -220,7 +212,7 @@ class ABCIssue:
         for i, a_i in issuer_attributes.items():
             accum *= pk.Y1[i] ** Bn.from_binary(a_i)
 
-        return Signature(pk.g1**u, accum**u)
+        return Signature(pk.g1 ** u, accum ** u)
 
     @ staticmethod
     def obtain_credential(
@@ -278,16 +270,19 @@ class ABCVerify:
         """
 
         signature = disclosure_proof.signature
+        disclosed_attributes = disclosure_proof.disclosed_attributes
 
         if signature.sig1 == G1.unity():
             return False
 
         sig2 = signature.sig2.pair(pk.g2)
-        Y2s = [signature.sig1.pair(pk.Y2[i]) for i in disclosure_proof.attributes.keys()]
-        a_is = [Bn.from_binary(a) for a in disclosure_proof.attributes.values()]
+        Y2s = [signature.sig1.pair(pk.Y2[i])
+               for i in disclosed_attributes.keys()]
+        a_is = [Bn.from_binary(a)
+                for a in disclosed_attributes.values()]
 
         C = sig2 / signature.sig1.pair(pk.X2)
         for Y2_i, a_i in zip(Y2s, a_is):
             C *= Y2_i ** (-a_i)
 
-        return  disclosure_proof.proof.verify(C, pk)
+        return disclosure_proof.proof.verify(C, pk)
