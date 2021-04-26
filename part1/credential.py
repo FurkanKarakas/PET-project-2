@@ -299,7 +299,6 @@ class ABCIssue:
             [t] + user_attributes_ints,
         )
 
-        # TODO: Furkan: We pass t as "state" to the obtain credential function, you need to store it and pass it to obtain_credential again
         return IssueRequest(C, proof), t
 
     @staticmethod
@@ -357,7 +356,9 @@ class ABCIssue:
             response.signature.gen, response.signature.sig / (response.signature.gen ** t))
 
         # Check that signature is valid
-        assert PSScheme.verify(pk, unblinded_signature, attributes)
+        assert PSScheme.verify(
+            pk, unblinded_signature, attributes),\
+            f"Verification failed.\nattributes: {attributes}\nunblinded signature generator: {unblinded_signature.gen}\nunblinded signature : {unblinded_signature.sig}"
 
         # Return unblinded signature
         return unblinded_signature

@@ -71,7 +71,7 @@ def test_abc():
     issuer_attributes = {i: attributes[i] for i in issuer_indices}
 
     # Choose which attributes should be revealed to verifyer
-    disclosed_indices = set(random.sample(possible_indices, N//2))
+    disclosed_indices = set(random.sample(user_indices, N//2))
     hidden_indices = possible_indices - disclosed_indices
     disclosed_attributes = {i: attributes[i] for i in disclosed_indices}
     hidden_attributes = {i: attributes[i] for i in hidden_indices}

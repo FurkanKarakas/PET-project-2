@@ -4,7 +4,7 @@ Classes that you need to complete.
 
 
 from petrelic.bn import Bn
-from credential import ABCIssue, ABCVerify, AttributeMap, BlindSignature, DisclosureProof, IssueRequest, PSScheme, PublicKey, SecretKey, Signature
+from credential import *
 from typing import Dict, List, Tuple
 
 # Optional import
@@ -21,9 +21,6 @@ class Server:
         """
         Server constructor.
         """
-        ###############################################
-        # TODO: Complete this function.
-        ###############################################
         pass
 
     @classmethod
@@ -45,9 +42,7 @@ class Server:
             You are free to design this as you see fit, but the return types
             should be encoded as bytes.
         """
-        ###############################################
-        # TODO: Complete this function.
-        ###############################################
+
         sk, pk = PSScheme.generate_keys(
             [subscription.encode() for subscription in subscriptions])
         # Save subscriptions as `valid_attributes`
@@ -81,9 +76,7 @@ class Server:
             serialized response (the client should be able to build a
                 credential with this response).
         """
-        ###############################################
-        # TODO: Complete this function.
-        ###############################################
+
         # Decode the public and secret keys
         sk, pk = jsonpickle.decode(server_sk), jsonpickle.decode(server_pk)
 
@@ -99,7 +92,7 @@ class Server:
 
         user_dict: Dict[int, bytes] = dict()
         # Check if attributes are valid and create the user index-attribute dictionary
-        # ? Do we need to handle the username differently?
+        # TODO: Do we need to handle the username differently?
         for subscription in subscriptions+[username]:
             if subscription not in self.valid_attributes_inverse:
                 raise AttributeError(
@@ -130,22 +123,24 @@ class Server:
         Returns:
             whether a signature is valid
         """
-        ###############################################
-        # TODO: Complete this function.
-        ###############################################
+
         pk = jsonpickle.decode(server_pk)
         if not isinstance(pk, PublicKey):
             raise TypeError("Invalid type provided.")
         sig = jsonpickle.decode(signature)
         if not isinstance(sig, DisclosureProof):
             raise TypeError("Invalid type provided.")
+        # TODO: There is an error with the keys of sig.disclosed_attributes. They are str instead of int.
+        sig.disclosed_attributes = {
+            int(key): value for key, value in sig.disclosed_attributes.items()}
 
         # This should be the same as the function input
-        check = sig.disclosed_attributes.values()
+        assert set([x.decode() for x in sig.disclosed_attributes.values()]
+                   ) == set(revealed_attributes), "Something is wrong. Did you provide the attributes correctly?"
 
-        # Check if attributes are valid and create the user index-attribute dictionary
+        # Check if attributes are valid
         for subscription in revealed_attributes:
-            if subscription not in self.valid_attributes_inverse or subscription not in check:
+            if subscription not in self.valid_attributes_inverse:
                 raise AttributeError(
                     f"{subscription} is not a valid attribute.")
 
@@ -159,9 +154,7 @@ class Client:
         """
         Client constructor.
         """
-        ###############################################
-        # TODO: Complete this function.
-        ###############################################
+
         self.valid_attributes = Server.valid_attributes
         self.valid_attributes_inverse = Server.valid_attributes_inverse
 
@@ -185,23 +178,20 @@ class Client:
                 from prepare_registration to proceed_registration_response.
                 You need to design the state yourself.
         """
-        ###############################################
-        # TODO: Complete this function.
-        ###############################################
 
-        self.chosen_attributes = {i: subscription for i, subscription in self.valid_attributes.items(
+        # TODO: Do we somehow need to use the input `username` here?
+
+        self.user_attributes = {i: subscription for i, subscription in self.valid_attributes.items(
         ) if subscription in subscriptions}
 
         pk = jsonpickle.decode(server_pk)
         if not isinstance(pk, PublicKey):
             raise TypeError("Invalid type provided.")
 
-        # Create user dictionary based on the subscriptions
-        user_dict: Dict[int, bytes] = {
-            self.valid_attributes_inverse[subscription]: subscription.encode() for subscription in subscriptions}
-        # Also add the username
-        user_dict[self.valid_attributes_inverse[username]] = username.encode()
-        issue_request, t = ABCIssue.create_issue_request(pk, user_dict)
+        user_data = {i: subscription.encode()
+                     for i, subscription in self.user_attributes.items()}
+        issue_request, t = ABCIssue.create_issue_request(
+            pk, user_data)
         return jsonpickle.encode(issue_request).encode(), t
 
     def process_registration_response(
@@ -221,9 +211,7 @@ class Client:
         Return:
             credentials: create an attribute-based credential for the user
         """
-        ###############################################
-        # TODO: Complete this function.
-        ###############################################
+
         pk = jsonpickle.decode(server_pk)
         if not isinstance(pk, PublicKey):
             raise TypeError("Invalid type provided.")
@@ -231,10 +219,10 @@ class Client:
         if not isinstance(response, BlindSignature):
             raise TypeError("Invalid type provided.")
         attributes = sorted(
-            list(self.chosen_attributes.items()), key=lambda x: x[0])
-        valid_attributes = [x[1].encode() for x in attributes]
+            list(self.valid_attributes.items()), key=lambda x: x[0])
+        attributes = [x[1].encode() for x in attributes]
         sig = ABCIssue.obtain_credential(
-            pk, valid_attributes, response, private_state)
+            pk, attributes, response, private_state)
         return jsonpickle.encode(sig).encode()
 
     def sign_request(
@@ -255,9 +243,7 @@ class Client:
         Returns:
             A message's signature (serialized)
         """
-        ###############################################
-        # TODO: Complete this function.
-        ###############################################
+
         pk = jsonpickle.decode(server_pk)
         if not isinstance(pk, PublicKey):
             raise TypeError("Invalid type provided.")
