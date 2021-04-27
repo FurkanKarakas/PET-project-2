@@ -20,9 +20,10 @@ import hashlib
 
 
 # Attributes
-Attribute = str
+AttributeValue = bytes
+AttributeName = str
 # Maps from attribute to Bn
-AttributeMap = Dict[Attribute, Bn]
+AttributeMap = Dict[AttributeName, AttributeValue]
 
 
 ######################
@@ -46,7 +47,7 @@ class SecretKey:
 
 
 class PublicKey:
-    def __init__(self, attributes: List[str], g1: G1Element, Y1: Dict[str, G1Element], g2: G2Element, X2: G2Element, Y2: Dict[str, G2Element]):
+    def __init__(self, attributes: List[AttributeName], g1: G1Element, Y1: Dict[str, G1Element], g2: G2Element, X2: G2Element, Y2: Dict[AttributeName, G2Element]):
         """Public Key of a Pointcheval-Sanders scheme
 
         Args:
@@ -188,7 +189,7 @@ class PSScheme:
     """This class contains basic operations in a Pointcheval-Sanders scheme"""
 
     @staticmethod
-    def generate_keys(attributes: List[Attribute]) -> Tuple[SecretKey, PublicKey]:
+    def generate_keys(attributes: List[AttributeName]) -> Tuple[SecretKey, PublicKey]:
         """Generate signer key pair
 
         Args:
@@ -361,8 +362,8 @@ class ABCIssue:
 
         Args:
             pk (PublicKey): Public Key of PS Scheme
-            attributes (List[Attribute]): All attributes of issuer and user combined
             response (BlindSignature): Blind Signature of Issuer over user and issuer attributes
+            attributes (AttributeMap): All attributes of issuer and user combined
             t (Bn): Random number from create_issue_request
 
         Returns:
