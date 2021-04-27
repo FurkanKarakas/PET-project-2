@@ -144,8 +144,8 @@ class FiatShamirProof:
 
         # Check if commitment matches
         commitment = C ** challenge
-        for v, r in zip(self.bases, self.response):
-            commitment *= v**r
+        for b, r in zip(self.bases, self.response):
+            commitment *= b**r
 
         return commitment == self.commitment
 
