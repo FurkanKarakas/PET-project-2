@@ -30,25 +30,26 @@ def test_ps_scheme():
 def test_fiat_shamir():
     """Test Fiat Shamir proof when verification should succeed
     """
+    N = 100
     # Generate random messages
-    msgs = [os.urandom(128) for i in range(100)]
+    msgs = [os.urandom(128) for i in range(N)]
 
     # Generate keys
     sk, pk = PSScheme.generate_keys(msgs)
 
     g = G1.generator()
-    exponents = [random.randint(100, 1000) for _ in range(100)]
+    bases = [g ** random.randint(100, 1000) for _ in range(N)]
+    exponents = [random.randint(100, 1000) for _ in range(N)]
 
-    t = G1.order().random()
-    C = pk.g1 ** t
-    for Y1_i, a_i in zip(pk.Y1, exponents):
-        C *= Y1_i ** a_i
+    C = bases[0] ** exponents[0]
+    for b, e in zip(bases[1:], exponents[1:]):
+        C *= b ** e
 
     # Check that verification passes on correct proof
     proof = FiatShamirProof(
         G1, C, pk,  # type:ignore
-        [pk.g1] + pk.Y1,  # type:ignore
-        [t] + exponents)  # type:ignore
+        bases,  # type:ignore
+        exponents)  # type:ignore
 
     assert proof.verify(C, pk)
 
