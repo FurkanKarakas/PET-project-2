@@ -70,7 +70,7 @@ def test_abc():
     issuer_attributes = [a for a in attributes if a not in user_attributes]
 
     # Do not disclose username
-    hidden_attributes = ["username"]
+    disclosed_attributes = ["restaurant", "bar", "sushi"]
 
     # Get random indices for user and issuer attributes
     user_attribute_map = {a: attribute_map[a] for a in user_attributes}
@@ -87,13 +87,12 @@ def test_abc():
 
     credential = ABCIssue.obtain_credential(pk, response, attribute_map, t)
 
-
     # Create random message
     message = os.urandom(128)
 
     # Check that correct disclosure proof verifies
     disclosure_proof = ABCVerify.create_disclosure_proof(
-        pk, credential, hidden_attributes, message)
+        pk, credential, disclosed_attributes, message)
     verification = ABCVerify.verify_disclosure_proof(
         pk, disclosure_proof, message)
     assert verification
@@ -102,7 +101,7 @@ def test_abc():
 
     # Check that disclosure proof with wrong pk fails
     disclosure_proof2 = ABCVerify.create_disclosure_proof(
-        pk2, credential, hidden_attributes, message)
+        pk2, credential, disclosed_attributes, message)
 
     verification2 = ABCVerify.verify_disclosure_proof(
         pk2, disclosure_proof, message)

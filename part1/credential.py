@@ -387,7 +387,7 @@ class ABCVerify:
     def create_disclosure_proof(
         pk: PublicKey,
         credential: AnonymousCredential,
-        hidden_attributes: List[str],
+        disclosed_attributes: List[str],
         message: bytes
     ) -> DisclosureProof:
         """Create a disclosure proof
@@ -407,13 +407,17 @@ class ABCVerify:
         signature = Signature(
             credential.signature.gen**r, (credential.signature.sig * credential.signature.gen**t)**r)
 
+        hidden_attributes = [
+            a for a in pk.attributes if a not in disclosed_attributes]
+
         # Calculate proof over hidden attributes (right hand side of showing protocol 2b)
         sig1 = signature.gen.pair(pk.g2)
         Y2s = [signature.gen.pair(pk.Y2[h]) for h in hidden_attributes]
         a_is = [Bn.from_binary(credential.attributes[h])
                 for h in hidden_attributes]
 
-        disclosed_attributes = {a:v for a,v in credential.attributes.items() if a not in hidden_attributes}
+        disclosed_attribute_map = {
+            d: credential.attributes[d] for d in disclosed_attributes}
 
         C = sig1 ** t
         C = C * GT.generator() ** Bn.from_binary(message)
@@ -427,7 +431,7 @@ class ABCVerify:
             [t, Bn.from_binary(message)] + a_is
         )
 
-        return DisclosureProof(signature, disclosed_attributes, proof)
+        return DisclosureProof(signature, disclosed_attribute_map, proof)
 
     @ staticmethod
     def verify_disclosure_proof(
