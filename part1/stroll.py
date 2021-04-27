@@ -3,9 +3,8 @@ Classes that you need to complete.
 """
 
 
-from petrelic.bn import Bn
 from credential import *
-from typing import Dict, List, Tuple
+from typing import List, Tuple
 
 # Optional import
 from serialization import jsonpickle
@@ -13,6 +12,7 @@ from serialization import jsonpickle
 
 VALID_SUBSCRIPTION = b'valid'
 INVALID_SUBSCRIPTION = b'invalid'
+
 
 class State:
     def __init__(self, attributes, t):
@@ -117,7 +117,7 @@ class Server:
         sig = jsonpickle.decode(signature)
         if not isinstance(sig, DisclosureProof):
             raise TypeError("Invalid type provided.")
-        
+
         return ABCVerify.verify_disclosure_proof(pk, sig, message)
 
 

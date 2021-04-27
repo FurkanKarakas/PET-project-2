@@ -16,16 +16,20 @@ def test_setup():
     subscriptions = ["bar", "sushi"]
     revealed_attributes = ["sushi"]
     message = b"Hello from Mars!"
-    
+
     server_sk, server_pk = server.generate_ca(attributes)
 
-    issuance_request, private_state = client.prepare_registration(server_pk, username, subscriptions)
+    issuance_request, private_state = client.prepare_registration(
+        server_pk, username, subscriptions)
 
     server_response = server.process_registration(
         server_sk, server_pk, issuance_request, username, subscriptions)
 
-    credentials = client.process_registration_response(server_pk, server_response, private_state)
+    credentials = client.process_registration_response(
+        server_pk, server_response, private_state)
 
-    signature = client.sign_request(server_pk, credentials, message, revealed_attributes)
+    signature = client.sign_request(
+        server_pk, credentials, message, revealed_attributes)
 
-    assert server.check_request_signature(server_pk, message, revealed_attributes, signature)
+    assert server.check_request_signature(
+        server_pk, message, revealed_attributes, signature)

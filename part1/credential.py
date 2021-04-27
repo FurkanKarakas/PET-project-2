@@ -375,7 +375,7 @@ class ABCIssue:
 
         # Check that signature is valid
         assert PSScheme.verify(
-            pk, unblinded_signature, attributes.values()),\
+            pk, unblinded_signature, list(attributes.values())),\
             f"Verification failed.\nattributes: {attributes}\nunblinded signature generator: {unblinded_signature.gen}\nunblinded signature : {unblinded_signature.sig}"
 
         # Return unblinded signature

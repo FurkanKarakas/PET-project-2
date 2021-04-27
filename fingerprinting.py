@@ -50,7 +50,7 @@ def perform_crossval(features, labels, folds=10):
     to evaluate the performance.         
     """
 
-    kf = StratifiedKFold(n_splits=folds)  # type: ignore
+    kf = StratifiedKFold(n_splits=folds)
     labels = np.array(labels)
     features = np.array(features)
 

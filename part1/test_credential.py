@@ -5,6 +5,7 @@ Unit tests for the credential module for implementing PS credentials
 from credential import *
 import os
 import random
+import string
 
 
 def test_ps_scheme():
@@ -33,14 +34,15 @@ def test_fiat_shamir():
     """Test Fiat Shamir proof when verification should succeed
     """
     N = 100
-    # Generate random messages
-    msgs = [os.urandom(128) for i in range(N)]
+    # Generate N random attributes of length 10
+    msgs = [''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase +
+                                  string.digits) for _ in range(10)) for _ in range(N)]
 
     # Generate keys
     sk, pk = PSScheme.generate_keys(msgs)
 
     g = G1.generator()
-    bases = [g ** random.randint(100, 1000) for _ in range(N)]
+    bases = [g ** G1.order().random() for _ in range(N)]
     exponents = [random.randint(100, 1000) for _ in range(N)]
 
     C = bases[0] ** exponents[0]
