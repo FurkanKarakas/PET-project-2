@@ -29,13 +29,13 @@ AttributeMap = Dict[Attribute, Bn]
 ## SIGNATURE SCHEME ##
 ######################
 class SecretKey:
-    def __init__(self, x: Bn, X1: G1Element, y: List[Bn]):
+    def __init__(self, x: Bn, X1: G1Element, y: Dict[str, Bn]):
         """Secret Key of a Pointcheval-Sanders scheme
 
         Args:
             x (Bn): random secret number
             X1 (G1Element): g1 ^ x
-            y (List[Bn]): list of random, secret numbers
+            y (Dict[str, Bn]): mapping from attribute to random, secret number
         """
         self.x = x
         self.X1 = X1
@@ -46,16 +46,18 @@ class SecretKey:
 
 
 class PublicKey:
-    def __init__(self, g1: G1Element, Y1: List[G1Element], g2: G2Element, X2: G2Element, Y2: List[G2Element]):
+    def __init__(self, attributes: List[str], g1: G1Element, Y1: Dict[str, G1Element], g2: G2Element, X2: G2Element, Y2: Dict[str, G2Element]):
         """Public Key of a Pointcheval-Sanders scheme
 
         Args:
+            attributes (List[str]): The list of possible attribute key
             g1 (G1Element): Any Generator of G1
-            Y1 (List[G1Element]): public part of y from SecretKey in G1, g1 ^ y
+            Y1 (Dict[str, G1Element]): public part of y from SecretKey in G1, g1 ^ y
             g2 (G2Element): Any Generator of G2
             X2 (G2Element): public part of x fom SecretKey, g2 ^ x
-            Y2 (List[G2Element]): public part of y from SecretKey in G2, g2 ^ y 
+            Y2 (Dict[str, G2Element]): public part of y from SecretKey in G2, g2 ^ y 
         """
+        self.attributes = attributes
         self.g1 = g1
         self.Y1 = Y1
         self.g2 = g2
@@ -204,7 +206,7 @@ class PSScheme:
         Y2 = {a: g2 ** y_i for a, y_i in y.items()}
 
         # Output public and secret keys
-        pk = PublicKey(g1, Y1, g2, X2, Y2)  # type:ignore
+        pk = PublicKey(attributes, g1, Y1, g2, X2, Y2)  # type:ignore
         sk = SecretKey(x, X1, y)
         return sk, pk
 
@@ -335,7 +337,7 @@ class ABCIssue:
     def obtain_credential(
         pk: PublicKey,
         response: BlindSignature,
-        attributes:AttributeMap,
+        attributes: AttributeMap,
         t: Bn
     ) -> Signature:
         """Derive a credential from the issuer's response
