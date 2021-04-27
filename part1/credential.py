@@ -109,8 +109,8 @@ class FiatShamirProof:
         noise = [G.order().random() for _ in bases]
 
         self.commitment = G.unity()
-        for v, n in zip(bases, noise):
-            self.commitment *= v**n
+        for b, n in zip(bases, noise):
+            self.commitment *= b**n
 
         self.challenge = self.create_hash(C, pk, self.commitment)
         self.response = [n.mod_sub(self.challenge * e, G.order())
