@@ -10,8 +10,8 @@ from typing import List, Tuple
 from serialization import jsonpickle
 
 
-VALID_SUBSCRIPTION = b'valid'
-INVALID_SUBSCRIPTION = b'invalid'
+PRESENT_SUBSCRIPTION = b'present'
+ABSENT_SUBSCRIPTION = b'absent'
 
 
 class State:
@@ -155,9 +155,14 @@ class Client:
         if not isinstance(pk, PublicKey):
             raise TypeError("Invalid type provided.")
 
+        # Check that subscriptions are valid ones
+        for sub in subscriptions:
+            if sub not in pk.attributes:
+                raise Exception(f"{sub} is not a valid subscription.")
+
         # User attributes maps subscription to True/False
         attribute_map = {
-            sub: VALID_SUBSCRIPTION if sub in subscriptions else INVALID_SUBSCRIPTION for sub in pk.attributes
+            sub: PRESENT_SUBSCRIPTION if sub in subscriptions else ABSENT_SUBSCRIPTION for sub in pk.attributes
         }
         attribute_map["username"] = username.encode()
 
@@ -223,6 +228,13 @@ class Client:
         credential = jsonpickle.decode(credentials)
         if not isinstance(credential, AnonymousCredential):
             raise TypeError("Invalid type provided.")
+
+        # Verify that revealed attributes are in user subscriptions.
+        for typee in types:
+            if typee not in credential.attributes:
+                raise Exception(f"{typee} is not in user subscriptions.")
+            if credential.attributes[typee] == ABSENT_SUBSCRIPTION:
+                raise Exception(f"{typee} is not in user subscriptions.")
 
         sig = ABCVerify.create_disclosure_proof(pk, credential, types, message)
         return jsonpickle.encode(sig).encode()
