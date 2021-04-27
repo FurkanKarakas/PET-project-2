@@ -6,7 +6,6 @@ Classes that you need to complete.
 from petrelic.bn import Bn
 from credential import *
 from typing import Dict, List, Tuple
-from os import urandom
 
 # Optional import
 from serialization import jsonpickle
