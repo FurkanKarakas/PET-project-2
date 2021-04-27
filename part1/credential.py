@@ -83,6 +83,12 @@ class Signature:
         return f"{self.__class__.__name__}({repr(self.gen)}, {repr(self.sig)})"
 
 
+class AnonymousCredential:
+    def __init__(self, signature: Signature, attributes: AttributeMap):
+        self.signature = signature
+        self.attributes = attributes
+
+
 class BlindSignature:
     def __init__(self, signature: Signature, issuer_attributes: AttributeMap):
         """Signature of Issuer over user and issuer attributes
@@ -321,6 +327,16 @@ class ABCIssue:
         Returns:
             Signature: Signature 
         """
+        attributes = [Bn.from_binary(a_i)
+                      for a_i in issuer_attributes.values()]
+        Y1s = [pk.Y1[a] for a in issuer_attributes.keys()]
+
+        # Calculate C
+        t = G1.order().random()
+        C = pk.g1 ** t
+        for Y1_i, a_i in zip(Y1s, attributes):
+            C *= Y1_i ** a_i
+
         # Verify that C has been calculated correctly
         assert(request.proof.verify(request.C, pk))
 
@@ -339,7 +355,7 @@ class ABCIssue:
         response: BlindSignature,
         attributes: AttributeMap,
         t: Bn
-    ) -> Signature:
+    ) -> AnonymousCredential:
         """Derive a credential from the issuer's response
         This corresponds to the "Unblinding signature" step.
 
@@ -362,7 +378,7 @@ class ABCIssue:
             f"Verification failed.\nattributes: {attributes}\nunblinded signature generator: {unblinded_signature.gen}\nunblinded signature : {unblinded_signature.sig}"
 
         # Return unblinded signature
-        return unblinded_signature
+        return AnonymousCredential(unblinded_signature, attributes)
 
 
 ## SHOWING PROTOCOL ##
@@ -370,9 +386,8 @@ class ABCVerify:
     @ staticmethod
     def create_disclosure_proof(
         pk: PublicKey,
-        signature: Signature,
-        hidden_attributes: AttributeMap,
-        disclosed_attributes: AttributeMap,
+        credential: AnonymousCredential,
+        hidden_attributes: List[str],
         message: bytes
     ) -> DisclosureProof:
         """Create a disclosure proof
@@ -390,12 +405,15 @@ class ABCVerify:
         r = G1.order().random()
         t = G1.order().random()
         signature = Signature(
-            signature.gen**r, (signature.sig * signature.gen**t)**r)
+            credential.signature.gen**r, (credential.signature.sig * credential.signature.gen**t)**r)
 
         # Calculate proof over hidden attributes (right hand side of showing protocol 2b)
         sig1 = signature.gen.pair(pk.g2)
-        Y2s = [signature.gen.pair(pk.Y2[i]) for i in hidden_attributes.keys()]
-        a_is = [Bn.from_binary(a) for a in hidden_attributes.values()]
+        Y2s = [signature.gen.pair(pk.Y2[h]) for h in hidden_attributes]
+        a_is = [Bn.from_binary(credential.attributes[h])
+                for h in hidden_attributes]
+
+        disclosed_attributes = {a:v for a,v in credential.attributes.items() if a not in hidden_attributes}
 
         C = sig1 ** t
         C = C * GT.generator() ** Bn.from_binary(message)

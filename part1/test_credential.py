@@ -66,20 +66,15 @@ def test_abc():
     attribute_map = {a: os.urandom(128) for a in attributes}
 
     # User attribute is just username, issuer attributes are the rest
-    user_attributes = ["username"]
+    user_attributes = ["restaurant", "bar", "sushi", "username"]
     issuer_attributes = [a for a in attributes if a not in user_attributes]
 
     # Do not disclose username
     hidden_attributes = ["username"]
-    disclosed_attributes = [
-        a for a in attributes if a not in hidden_attributes]
 
     # Get random indices for user and issuer attributes
     user_attribute_map = {a: attribute_map[a] for a in user_attributes}
     issuer_attribute_map = {a: attribute_map[a] for a in issuer_attributes}
-    hidden_attribute_map = {a: attribute_map[a] for a in hidden_attributes}
-    disclosed_attribute_map = {
-        a: attribute_map[a] for a in disclosed_attributes}
 
     # Generate keys
     sk, pk = PSScheme.generate_keys(attributes)
@@ -98,7 +93,7 @@ def test_abc():
 
     # Check that correct disclosure proof verifies
     disclosure_proof = ABCVerify.create_disclosure_proof(
-        pk, credential, hidden_attribute_map, disclosed_attribute_map, message)
+        pk, credential, hidden_attributes, message)
     verification = ABCVerify.verify_disclosure_proof(
         pk, disclosure_proof, message)
     assert verification
@@ -107,7 +102,7 @@ def test_abc():
 
     # Check that disclosure proof with wrong pk fails
     disclosure_proof2 = ABCVerify.create_disclosure_proof(
-        pk2, credential, hidden_attribute_map, disclosed_attribute_map, message)
+        pk2, credential, hidden_attributes, message)
 
     verification2 = ABCVerify.verify_disclosure_proof(
         pk2, disclosure_proof, message)
