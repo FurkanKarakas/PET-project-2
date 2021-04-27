@@ -11,11 +11,13 @@ def test_ps_scheme():
     """Test PS Scheme
     """
     # Generate random messages
-    msgs = [os.urandom(128) for i in range(100)]
+    attributes = ["restaurant", "bar", "sushi", "username"]
 
     # Generate keys
-    sk1, pk1 = PSScheme.generate_keys(msgs)
-    sk2, pk2 = PSScheme.generate_keys(msgs)
+    sk1, pk1 = PSScheme.generate_keys(attributes)
+    sk2, pk2 = PSScheme.generate_keys(attributes)
+
+    msgs = [os.urandom(128) for _ in attributes]
 
     # Sign messages
     signature = PSScheme.sign(sk1, msgs)
@@ -58,41 +60,45 @@ def test_fiat_shamir():
 
 
 def test_abc():
-    N = 10
-    # Generate random messages
-    attributes = [os.urandom(128) for i in range(N)]
+
+    # Attributes with random values
+    attributes = ["restaurant", "bar", "sushi", "username"]
+    attribute_map = {a: os.urandom(128) for a in attributes}
+
+    # User attribute is just username, issuer attributes are the rest
+    user_attributes = ["username"]
+    issuer_attributes = [a for a in attributes if a not in user_attributes]
+
+    # Do not disclose username
+    hidden_attributes = ["username"]
+    disclosed_attributes = [
+        a for a in attributes if a not in hidden_attributes]
 
     # Get random indices for user and issuer attributes
-    possible_indices = set(range(N))
-    user_indices = set(random.sample(possible_indices, N//2))
-    issuer_indices = possible_indices - user_indices
-
-    # Get attribute maps
-    user_attributes = {i: attributes[i] for i in user_indices}
-    issuer_attributes = {i: attributes[i] for i in issuer_indices}
-
-    # Choose which attributes should be revealed to verifyer
-    disclosed_indices = set(random.sample(user_indices, N//2))
-    hidden_indices = possible_indices - disclosed_indices
-    disclosed_attributes = {i: attributes[i] for i in disclosed_indices}
-    hidden_attributes = {i: attributes[i] for i in hidden_indices}
+    user_attribute_map = {a: attribute_map[a] for a in user_attributes}
+    issuer_attribute_map = {a: attribute_map[a] for a in issuer_attributes}
+    hidden_attribute_map = {a: attribute_map[a] for a in hidden_attributes}
+    disclosed_attribute_map = {
+        a: attribute_map[a] for a in disclosed_attributes}
 
     # Generate keys
     sk, pk = PSScheme.generate_keys(attributes)
 
     # Get issue request as well as the state t which we need for later
-    request, t = ABCIssue.create_issue_request(pk, user_attributes)
+    request, t = ABCIssue.create_issue_request(pk, user_attribute_map)
 
-    response = ABCIssue.sign_issue_request(sk, pk, request, issuer_attributes)
+    response = ABCIssue.sign_issue_request(
+        sk, pk, request, issuer_attribute_map)
 
-    credential = ABCIssue.obtain_credential(pk, attributes, response, t)
+    credential = ABCIssue.obtain_credential(pk, response, attribute_map, t)
+
 
     # Create random message
     message = os.urandom(128)
 
     # Check that correct disclosure proof verifies
     disclosure_proof = ABCVerify.create_disclosure_proof(
-        pk, credential, hidden_attributes, disclosed_attributes, message)
+        pk, credential, hidden_attribute_map, disclosed_attribute_map, message)
     verification = ABCVerify.verify_disclosure_proof(
         pk, disclosure_proof, message)
     assert verification
@@ -101,7 +107,7 @@ def test_abc():
 
     # Check that disclosure proof with wrong pk fails
     disclosure_proof2 = ABCVerify.create_disclosure_proof(
-        pk2, credential, hidden_attributes, disclosed_attributes, message)
+        pk2, credential, hidden_attribute_map, disclosed_attribute_map, message)
 
     verification2 = ABCVerify.verify_disclosure_proof(
         pk2, disclosure_proof, message)

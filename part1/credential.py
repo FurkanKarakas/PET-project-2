@@ -20,9 +20,9 @@ import hashlib
 
 
 # Attributes
-Attribute = bytes
-# Maps from attribute index to attribute value
-AttributeMap = Dict[int, Attribute]
+Attribute = str
+# Maps from attribute to Bn
+AttributeMap = Dict[Attribute, Bn]
 
 
 ######################
@@ -191,7 +191,7 @@ class PSScheme:
         """
         # Pick uniformly random variables
         x = G1.order().random()
-        y = [G1.order().random() for _ in range(len(attributes))]
+        y = {a: G1.order().random() for a in attributes}
 
         # take generators of G1 and G2
         g1 = G1.generator()
@@ -200,8 +200,8 @@ class PSScheme:
         # Compute Xs and Ys
         X1 = g1 ** x
         X2 = g2 ** x
-        Y1 = [g1 ** y_i for y_i in y]
-        Y2 = [g2 ** y_i for y_i in y]
+        Y1 = {a: g1 ** y_i for a, y_i in y.items()}
+        Y2 = {a: g2 ** y_i for a, y_i in y.items()}
 
         # Output public and secret keys
         pk = PublicKey(g1, Y1, g2, X2, Y2)  # type:ignore
@@ -224,7 +224,7 @@ class PSScheme:
         # pick generator
         h = G1.generator()
         exponent = sk.x + sum([y_i * Bn.from_binary(m_i)
-                               for (y_i, m_i) in zip(sk.y, msgs)])
+                               for (y_i, m_i) in zip(sk.y.values(), msgs)])
 
         return Signature(h, h**exponent)  # type:ignore
 
@@ -247,7 +247,7 @@ class PSScheme:
             assert(len(msgs) == len(pk.Y2)
                    ), f"Message length: {len(msgs)}, pk.Y2 length: {len(pk.Y2)}"
             accum = pk.X2
-            for Y2_i, m_i in zip(pk.Y2, msgs):
+            for Y2_i, m_i in zip(pk.Y2.values(), msgs):
                 accum = accum * Y2_i**Bn.from_binary(m_i)
             return signature.gen.pair(accum) == signature.sig.pair(pk.g2)
 
@@ -282,21 +282,20 @@ class ABCIssue:
             Tuple[IssueRequest, Bn]: Request specifying which Attributs belong to the user,
                                      as well as the random t which the user needs again later.
         """
-        user_attributes_ints = [Bn.from_binary(
-            a) for a in user_attributes.values()]
-        Y1s = [pk.Y1[i] for i in user_attributes.keys()]
+        attributes = [Bn.from_binary(a_i) for a_i in user_attributes.values()]
+        Y1s = [pk.Y1[a] for a in user_attributes.keys()]
 
         # Calculate C
         t = G1.order().random()
         C = pk.g1 ** t
-        for Y1_i, a_i in zip(Y1s, user_attributes_ints):
+        for Y1_i, a_i in zip(Y1s, attributes):
             C *= Y1_i ** a_i
 
         # Proof that C has been calculated correctly
         proof = FiatShamirProof(
             G1, C, pk,  # type:ignore
             [pk.g1] + Y1s,  # type:ignore
-            [t] + user_attributes_ints,
+            [t] + attributes
         )
 
         return IssueRequest(C, proof), t
@@ -335,8 +334,8 @@ class ABCIssue:
     @ staticmethod
     def obtain_credential(
         pk: PublicKey,
-        attributes: List[Attribute],
         response: BlindSignature,
+        attributes:AttributeMap,
         t: Bn
     ) -> Signature:
         """Derive a credential from the issuer's response
@@ -357,7 +356,7 @@ class ABCIssue:
 
         # Check that signature is valid
         assert PSScheme.verify(
-            pk, unblinded_signature, attributes),\
+            pk, unblinded_signature, attributes.values()),\
             f"Verification failed.\nattributes: {attributes}\nunblinded signature generator: {unblinded_signature.gen}\nunblinded signature : {unblinded_signature.sig}"
 
         # Return unblinded signature
