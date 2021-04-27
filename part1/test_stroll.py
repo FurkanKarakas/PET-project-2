@@ -14,7 +14,7 @@ def test_setup():
     attributes = ["restaurant", "bar", "sushi", "username"]
     username = "Furkan"
     subscriptions = ["bar", "sushi"]
-    revealed_attributes = ["restaurant", "bar", "sushi"]
+    revealed_attributes = ["sushi"]
     message = b"Hello from Mars!"
     
     server_sk, server_pk = server.generate_ca(attributes)
