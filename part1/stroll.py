@@ -11,6 +11,9 @@ from typing import Dict, List, Tuple
 from serialization import jsonpickle
 
 
+VALID_SUBSCRIPTION = b'valid'
+INVALID_SUBSCRIPTION = b'invalid'
+
 class State:
     def __init__(self, attributes, t):
         self.attributes = attributes
@@ -154,7 +157,7 @@ class Client:
 
         # User attributes maps subscription to True/False
         attribute_map = {
-            sub: b"\x01" if sub in subscriptions else b"\x00" for sub in pk.attributes
+            sub: VALID_SUBSCRIPTION if sub in subscriptions else INVALID_SUBSCRIPTION for sub in pk.attributes
         }
         attribute_map["username"] = username.encode()
 
