@@ -4,3 +4,6 @@ __pycache__/
 .pytest_cache/
 .benchmarks/
 .cache
+*.pub
+*.sec
+*.cred
