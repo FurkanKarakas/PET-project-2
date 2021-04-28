@@ -91,7 +91,7 @@ def test_wrong_reveal():
             server_pk, credentials, message, revealed_attributes)
 
 
-def test_username():
+def test_no_reveal():
     """Test if we don't reveal any attributes
     """
     server = Server()

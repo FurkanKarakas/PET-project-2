@@ -86,6 +86,12 @@ class Signature:
 
 class AnonymousCredential:
     def __init__(self, signature: Signature, attributes: AttributeMap):
+        """Anonymous Credential
+
+        Args:
+            signature (Signature): The signature of the anonymous credential
+            attributes (AttributeMap): Attributes disclosed to server
+        """
         self.signature = signature
         self.attributes = attributes
 
@@ -136,12 +142,13 @@ class FiatShamirProof:
         challenge_hash = hashlib.sha256(challenge_str.encode())
         return Bn.from_binary(challenge_hash.digest())
 
-    def verify(self, C: Union[G1Element, G2Element, GTElement], pk: PublicKey):
+    def verify(self, C: Union[G1Element, G2Element, GTElement], pk: PublicKey, bases: List[Union[G1Element, G2Element, GTElement]]):
         """Verifies the proof with any C and pk
 
         Args:
             C (Union[G1Element, G2Element, GTElement]): The C we want to verify
             pk (PublicKey): Public Key of ABC Scheme
+            bases (List[Union[G1Element, G2Element, GTElement]]): The bases used to calculate C
 
         Returns:
             bool: True iff the prove could be verified, False otherwises
@@ -153,7 +160,7 @@ class FiatShamirProof:
 
         # Check if commitment matches
         commitment = C ** challenge
-        for b, r in zip(self.bases, self.response):
+        for b, r in zip(bases, self.response):
             commitment *= b**r
 
         return commitment == self.commitment
@@ -196,7 +203,7 @@ class PSScheme:
             attributes (List[Attribute]): The attributes for which the key pair should be generated
 
         Returns:
-            Tuple[SecretKey, PublicKey]: Secret andpPublic keys for given attributes
+            Tuple[SecretKey, PublicKey]: Secret and Public keys for given attributes
         """
         # Pick uniformly random variables
         x = G1.order().random()
@@ -265,11 +272,6 @@ class PSScheme:
 ## ATTRIBUTE-BASED CREDENTIALS ##
 #################################
 
-        """ Create an issuance request
-        This corresponds to the "user commitment" step in the issuance protocol.
-        *Warning:* You may need to pass state to the `obtain_credential` function.
-        """
-
 ## ISSUANCE PROTOCOL ##
 
 
@@ -326,20 +328,16 @@ class ABCIssue:
             issuer_attributes (AttributeMap): Attributes belonging to issuer
 
         Returns:
-            Signature: Signature 
+            BlindSignature: signature corresponding to the user's request 
         """
-        attributes = [Bn.from_binary(a_i)
-                      for a_i in issuer_attributes.values()]
-        Y1s = [pk.Y1[a] for a in issuer_attributes.keys()]
-
-        # Calculate C
-        t = G1.order().random()
-        C = pk.g1 ** t
-        for Y1_i, a_i in zip(Y1s, attributes):
-            C *= Y1_i ** a_i
+        Y1_user = [pk.Y1[a]
+                   for a in pk.attributes if a not in issuer_attributes.keys()]
 
         # Verify that C has been calculated correctly
-        assert(request.proof.verify(request.C, pk))
+        assert(request.proof.verify(
+            request.C,
+            pk,
+            [pk.g1] + Y1_user))
 
         # Sign issuer attributes
         u = G1.order().random()
@@ -367,7 +365,7 @@ class ABCIssue:
             t (Bn): Random number from create_issue_request
 
         Returns:
-            Signature: Final, unblinded signature over attributes
+            AnonymousCredential: Final, unblinded signature over attributes together with disclosed attributes
         """
         # Unblind signature
         unblinded_signature = Signature(
@@ -395,9 +393,9 @@ class ABCVerify:
 
         Args:
             pk (PublicKey): Public Key of PS Scheme
-            signature (Signature): Signature over all attributes
+            credential (AnonymousCredential): Signature over all attributes
             hidden_attributes (AttributeMap): Attributes that are to be hidden from verifier
-            disclosed_attributes (AttributeMap): All attributes not in hidden_attributes
+            message (bytes): The message that is to be signed together with the request
 
         Returns:
             DisclosureProof: Proof that both parties agree on which arguments are disclosed
@@ -421,9 +419,11 @@ class ABCVerify:
             d: credential.attributes[d] for d in disclosed_attributes}
 
         C = sig1 ** t
-        C = C * GT.generator() ** Bn.from_binary(message)
         for Y2_i, a_i in zip(Y2s, a_is):
             C = C * Y2_i ** a_i
+
+        # Also sign the message
+        C = C * GT.generator() ** Bn.from_binary(message)
 
         # Proof that C was calculated correctly
         proof = FiatShamirProof(
@@ -445,13 +445,15 @@ class ABCVerify:
         Args:
             pk (PublicKey): Public Key of PS scheme
             disclosure_proof (DisclosureProof): Proof that both parties agree on which arguments are disclosed
-
+            message (bytes): The message that is to be verified together with the proof
         Returns:
             bool: True iff the disclosure proof could be verified, False otherwise
         """
 
         signature = disclosure_proof.signature
         disclosed_attributes = disclosure_proof.disclosed_attributes
+        Y2_hidden = [signature.gen.pair(
+            pk.Y2[h]) for h in pk.attributes if h not in disclosure_proof.disclosed_attributes]
 
         # Check that the signature generator is not 1
         if signature.gen == G1.unity():
@@ -467,6 +469,11 @@ class ABCVerify:
         C = sig2 / signature.gen.pair(pk.X2)
         for Y2_i, a_i in zip(Y2s, a_is):
             C = C * Y2_i ** (-a_i)
+        
+        # Also verify the message
         C = C * GT.generator() ** Bn.from_binary(message)
 
-        return disclosure_proof.proof.verify(C, pk)
+        return disclosure_proof.proof.verify(
+            C,
+            pk,
+            [signature.gen.pair(pk.g2),  GT.generator()] + Y2_hidden)

@@ -55,10 +55,10 @@ def test_fiat_shamir():
         bases,  # type:ignore
         exponents)  # type:ignore
 
-    assert proof.verify(C, pk)
+    assert proof.verify(C, pk, bases)
 
     # Check that verification fails on wrong C
-    assert not proof.verify(C**2, pk)
+    assert not proof.verify(C**2, pk, bases)
 
 
 def test_abc():
