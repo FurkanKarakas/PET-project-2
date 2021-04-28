@@ -117,6 +117,10 @@ class Server:
         sig = jsonpickle.decode(signature)
         if not isinstance(sig, DisclosureProof):
             raise TypeError("Invalid type provided.")
+        
+        for a in revealed_attributes:
+            if a not in sig.disclosed_attributes or sig.disclosed_attributes[a] != PRESENT_SUBSCRIPTION:
+                return False
 
         return ABCVerify.verify_disclosure_proof(pk, sig, message)
 

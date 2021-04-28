@@ -117,5 +117,6 @@ def test_username():
     signature = client.sign_request(
         server_pk, credentials, message, revealed_attributes)
 
-    assert server.check_request_signature(
-        server_pk, message, revealed_attributes, signature)
+    assert server.check_request_signature(server_pk, message, revealed_attributes, signature)
+
+    assert not server.check_request_signature(server_pk, message, ["restaurant"], signature)
