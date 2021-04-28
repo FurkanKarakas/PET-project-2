@@ -118,5 +118,3 @@ def test_username():
         server_pk, credentials, message, revealed_attributes)
 
     assert server.check_request_signature(server_pk, message, revealed_attributes, signature)
-
-    assert not server.check_request_signature(server_pk, message, ["restaurant"], signature)
