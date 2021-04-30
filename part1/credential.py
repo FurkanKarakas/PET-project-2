@@ -337,7 +337,7 @@ class ABCIssue:
         assert(request.proof.verify(
             request.C,
             pk,
-            [pk.g1] + Y1_user))
+            [pk.g1] + Y1_user))  # type:ignore
 
         # Sign issuer attributes
         u = G1.order().random()
@@ -469,7 +469,7 @@ class ABCVerify:
         C = sig2 / signature.gen.pair(pk.X2)
         for Y2_i, a_i in zip(Y2s, a_is):
             C = C * Y2_i ** (-a_i)
-        
+
         # Also verify the message
         C = C * GT.generator() ** Bn.from_binary(message)
 
