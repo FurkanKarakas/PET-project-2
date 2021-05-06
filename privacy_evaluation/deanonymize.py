@@ -116,7 +116,7 @@ quarter_distance = 100  # At what distance (m) the score should be 0.25
 scores = 1/(1 + distances * (78348/quarter_distance))**2
 
 #%%
-
+users = pd.DataFrame()
 #poi_scores = {str(poi_type): scores[:, pois.poi_type == poi_type] for poi_type in pois.poi_type.unique()}
 # Instantiate classes
 for ip, user_data in queries.groupby("ip_address"):
