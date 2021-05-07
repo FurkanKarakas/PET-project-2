@@ -8,3 +8,8 @@ pytest
 requests
 scikit-learn
 numpy
+scapy
+ipython
+matplotlib
+pandas
+
