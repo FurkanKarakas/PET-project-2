@@ -24,13 +24,13 @@ class User:
     def plot(self):
         plt.plot(self.queries.lat, self.queries.lon, zorder=0)
         plt.scatter(self.queries.lat, self.queries.lon,
-                    c=self.queries.timestamp % 24, cmap="hsv", vmin=0, vmax=24)
+                    c=self.queries.timestamp % 24, cmap="hsv", vmin=0, vmax=24)  # type:ignore
 
         plt.plot([self.home.lat], [self.home.lon], color=(
-                1, 0, 0), marker="*", markersize=20, zorder=1)
+            1, 0, 0), marker="*", markersize=20, zorder=1)
         plt.plot([self.work.lat], [self.work.lon], color=(
-                0, 1, 0), marker="*", markersize=20, zorder=1)
-        
+            0, 1, 0), marker="*", markersize=20, zorder=1)
+
         plt.colorbar()
         plt.title(self.ip)
         plt.show()
@@ -115,7 +115,7 @@ distances = np.sqrt(delta_lat**2 + delta_lon**2)
 quarter_distance = 100  # At what distance (m) the score should be 0.25
 scores = 1/(1 + distances * (78348/quarter_distance))**2
 
-#%%
+# %%
 users = pd.DataFrame()
 #poi_scores = {str(poi_type): scores[:, pois.poi_type == poi_type] for poi_type in pois.poi_type.unique()}
 # Instantiate classes
@@ -124,16 +124,19 @@ for ip, user_data in queries.groupby("ip_address"):
     user_scored_pois = pois.copy()
     topscorers = {}
     for weighter in weighters:
-        weights = weighter.weight_fun(user_data.time_of_day).to_numpy().reshape(-1, 1)
-        weighted_pois = pd.concat(user_scored_pois[user_scored_pois.poi_type == poi_type] for poi_type in weighter.poi_types)
+        weights = weighter.weight_fun(
+            user_data.time_of_day).to_numpy().reshape(-1, 1)
+        weighted_pois = pd.concat(
+            user_scored_pois[user_scored_pois.poi_type == poi_type] for poi_type in weighter.poi_types)
         weighted_scores = user_scores[:, weighted_pois.index] * weights
         weighted_pois[f"score"] = weighted_scores.sum(axis=0) / len(user_data)
         best_index = weighted_pois.score.idxmax()
         topscorers[weighter.name] = weighted_pois.loc[best_index]
-    
-    user = User(ip, user_data, topscorers["home"], topscorers["work"], topscorers["lunch"], topscorers["sports"], topscorers["social"])
+
+    user = User(ip, user_data, topscorers["home"], topscorers["work"],
+                topscorers["lunch"], topscorers["sports"], topscorers["social"])
     print(ip)
     user.plot()
 # %%
-server.closest(46.50005085562444, 6.583769105491683, "gym", 10)
+# server.closest(46.50005085562444, 6.583769105491683, "gym", 10)
 # %%
