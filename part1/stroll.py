@@ -103,7 +103,7 @@ class Server:
             raise Exception(f"A subscription with name username is present")
         issuer_attributes["username"] = username.encode()
 
-        # Use the helper function to get the blind signature, the issuer does not have to add any attributes
+        # Use the helper function to get the blind signature, the issuer issues all subscriptions in the name of the client
         blind_signature = ABCIssue.sign_issue_request(
             sk, pk, issuance, issuer_attributes)
 
