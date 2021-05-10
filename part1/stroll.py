@@ -29,8 +29,8 @@ class Server:
         """
         pass
 
-    @staticmethod
-    def generate_ca(subscriptions: List[str]) -> Tuple[bytes, bytes]:
+    @classmethod
+    def generate_ca(cls, subscriptions: List[str]) -> Tuple[bytes, bytes]:
         """Initializes the credential system. Runs exactly once in the
         beginning. Decides on schemes public parameters and choses a secret key
         for the server.
@@ -46,6 +46,9 @@ class Server:
             You are free to design this as you see fit, but the return types
             should be encoded as bytes.
         """
+
+        # Store the valid subscriptions
+        cls.valid_subscriptions = subscriptions
 
         sk, pk = PSScheme.generate_keys(subscriptions)
         return jsonpickle.encode(sk).encode(), jsonpickle.encode(pk).encode()
@@ -85,9 +88,27 @@ class Server:
         if not isinstance(issuance, IssueRequest):
             raise TypeError("Invalid type provided.")
 
+        # Make sure that subscriptions are valid
+        # The issuer will issue all the attributes
+        issuer_attributes = {
+            attribute: ABSENT_SUBSCRIPTION for attribute in self.valid_subscriptions}
+        for sub in subscriptions:
+            if sub not in self.valid_subscriptions:
+                raise Exception(f"{sub} is not a valid subscription")
+            # Make sure that they are not duplicate
+            if issuer_attributes[sub] == PRESENT_SUBSCRIPTION:
+                raise Exception(f"{sub} included many times")
+            issuer_attributes[sub] = PRESENT_SUBSCRIPTION
+
+        # Also add the username
+        # Check if there was a subscription with name `username`
+        if issuer_attributes["username"] == PRESENT_SUBSCRIPTION:
+            raise Exception(f"A subscription with name username is present")
+        issuer_attributes["username"] = username.encode()
+
         # Use the helper function to get the blind signature, the issuer does not have to add any attributes
         blind_signature = ABCIssue.sign_issue_request(
-            sk, pk, issuance, {})
+            sk, pk, issuance, issuer_attributes)
 
         # Encode and return it
         return jsonpickle.encode(blind_signature).encode()
@@ -117,7 +138,7 @@ class Server:
         sig = jsonpickle.decode(signature)
         if not isinstance(sig, DisclosureProof):
             raise TypeError("Invalid type provided.")
-        
+
         for a in revealed_attributes:
             if a not in sig.disclosed_attributes or sig.disclosed_attributes[a] != PRESENT_SUBSCRIPTION:
                 return False
@@ -160,20 +181,27 @@ class Client:
             raise TypeError("Invalid type provided.")
 
         # Check that subscriptions are valid ones
+        # Also make sure that they are unique
+        count_dict: Dict[str, int] = dict()
         for sub in subscriptions:
             if sub not in pk.attributes:
                 raise Exception(f"{sub} is not a valid subscription.")
+            count_dict[sub] = count_dict.get(sub, 0)+1
+            if count_dict[sub] > 1:
+                raise Exception(f"{sub} included multiple times.")
 
-        # User attributes maps subscription to True/False
-        attribute_map = {
-            sub: PRESENT_SUBSCRIPTION if sub in subscriptions else ABSENT_SUBSCRIPTION for sub in pk.attributes
-        }
-        attribute_map["username"] = username.encode()
+        # Lastly check for the username
+        count_dict["username"] = count_dict.get("username", 0)+1
+        if count_dict["username"] > 1:
+            raise Exception(
+                f"Attribute username already included in subscriptions and username with value {username} already provided. Make sure that you do not include any username in the subscriptions list.")
 
-        issue_request, t = ABCIssue.create_issue_request(
-            pk, attribute_map)
+        # Store the subscriptions and username in a list
+        self.user_attributes = subscriptions+[username]
 
-        return jsonpickle.encode(issue_request).encode(), State(attribute_map, t)
+        issue_request, t = ABCIssue.create_issue_request(pk, {})
+
+        return jsonpickle.encode(issue_request).encode(), State({}, t)
 
     def process_registration_response(
         self,
@@ -200,6 +228,19 @@ class Client:
         response = jsonpickle.decode(server_response)
         if not isinstance(response, BlindSignature):
             raise TypeError("Invalid type provided.")
+
+        # Check that the server indeed issued the correct credentials
+        if response.issuer_attributes["username"] != self.user_attributes[-1].encode():
+            raise Exception("Server username: {server}, user's username: {client}".format(
+                server=response.issuer_attributes["username"].decode(), client=self.user_attributes[-1]))
+        for key, value in response.issuer_attributes.items():
+            # If key is in user_attributes and value is not present subscription, then the server issued a false crendential
+            if key in self.user_attributes and value != PRESENT_SUBSCRIPTION:
+                raise Exception(
+                    f"The attribute {key} is not issued by the server")
+            # If key is not in user_attributes and value is present in subscription, then the server issued a false credential
+            if key not in self.user_attributes and value == PRESENT_SUBSCRIPTION:
+                raise Exception(f"The attribute {key} is issued by the server")
 
         credential = ABCIssue.obtain_credential(
             pk, response, private_state.attributes, private_state.t)
