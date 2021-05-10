@@ -29,8 +29,8 @@ class Server:
         """
         pass
 
-    @classmethod
-    def generate_ca(cls, subscriptions: List[str]) -> Tuple[bytes, bytes]:
+    @staticmethod
+    def generate_ca(subscriptions: List[str]) -> Tuple[bytes, bytes]:
         """Initializes the credential system. Runs exactly once in the
         beginning. Decides on schemes public parameters and choses a secret key
         for the server.
@@ -46,9 +46,6 @@ class Server:
             You are free to design this as you see fit, but the return types
             should be encoded as bytes.
         """
-
-        # Store the valid subscriptions
-        cls.valid_subscriptions = subscriptions
 
         sk, pk = PSScheme.generate_keys(subscriptions)
         return jsonpickle.encode(sk).encode(), jsonpickle.encode(pk).encode()
@@ -91,9 +88,9 @@ class Server:
         # Make sure that subscriptions are valid
         # The issuer will issue all the attributes
         issuer_attributes = {
-            attribute: ABSENT_SUBSCRIPTION for attribute in self.valid_subscriptions}
+            attribute: ABSENT_SUBSCRIPTION for attribute in pk.attributes}
         for sub in subscriptions:
-            if sub not in self.valid_subscriptions:
+            if sub not in pk.attributes:
                 raise Exception(f"{sub} is not a valid subscription")
             # Make sure that they are not duplicate
             if issuer_attributes[sub] == PRESENT_SUBSCRIPTION:
@@ -201,7 +198,13 @@ class Client:
 
         issue_request, t = ABCIssue.create_issue_request(pk, {})
 
-        return jsonpickle.encode(issue_request).encode(), State({}, t)
+        # User attributes maps subscription to True/False
+        attribute_map = {
+            sub: PRESENT_SUBSCRIPTION if sub in subscriptions else ABSENT_SUBSCRIPTION for sub in pk.attributes
+        }
+        attribute_map["username"] = username.encode()
+
+        return jsonpickle.encode(issue_request).encode(), State(attribute_map, t)
 
     def process_registration_response(
         self,
