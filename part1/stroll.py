@@ -194,7 +194,7 @@ class Client:
                 f"Attribute username already included in subscriptions and username with value {username} already provided. Make sure that you do not include any username in the subscriptions list.")
 
         # Store the subscriptions and username in a list
-        self.user_attributes = subscriptions+[username]
+        user_attributes = subscriptions+[username]
 
         issue_request, t = ABCIssue.create_issue_request(pk, {})
 
@@ -233,18 +233,13 @@ class Client:
             raise TypeError("Invalid type provided.")
 
         # Check that the server indeed issued the correct credentials
-        if response.issuer_attributes["username"] != self.user_attributes[-1].encode():
-            raise Exception("Server username: {server}, user's username: {client}".format(
-                server=response.issuer_attributes["username"].decode(), client=self.user_attributes[-1]))
         for key, value in response.issuer_attributes.items():
-            # If key is in user_attributes and value is not present subscription, then the server issued a false crendential
-            if key in self.user_attributes and value != PRESENT_SUBSCRIPTION:
-                raise Exception(
-                    f"The attribute {key} is not issued by the server")
-            # If key is not in user_attributes and value is present in subscription, then the server issued a false credential
-            if key not in self.user_attributes and value == PRESENT_SUBSCRIPTION:
-                raise Exception(f"The attribute {key} is issued by the server")
-
+            if key not in private_state.attributes:
+                raise Exception(f"Server attribute {key} not in user attributes.")
+            else:
+                if private_state.attributes[key] != value:
+                    raise Exception(f"Disagreement on {key}: Server thinks its {value}, user think its {private_state.attributes[key]}")
+ 
         credential = ABCIssue.obtain_credential(
             pk, response, private_state.attributes, private_state.t)
 
