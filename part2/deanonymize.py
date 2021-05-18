@@ -68,7 +68,7 @@ weighters = [
     ),
     PoiWeighter(
         "social",
-        ["restaurant", "cafeteria", "bar", "club"],
+        ["restaurant", "bar", "club"],
         22, 20, 0
     )
 ]
@@ -111,12 +111,13 @@ delta_lon = subtraction_matrix(
 # Distances in degrees
 distances = np.sqrt(delta_lat**2 + delta_lon**2)
 
+# See https://www.desmos.com/calculator/dlzawknavh
 # Scores: distance 0 -> score 1, distance 100 -> score 0.25
 quarter_distance = 100  # At what distance (m) the score should be 0.25
 scores = 1/(1 + distances * (78348/quarter_distance))**2
 
 # %%
-users = pd.DataFrame()
+#users = pd.DataFrame()
 #poi_scores = {str(poi_type): scores[:, pois.poi_type == poi_type] for poi_type in pois.poi_type.unique()}
 # Instantiate classes
 for ip, user_data in queries.groupby("ip_address"):
