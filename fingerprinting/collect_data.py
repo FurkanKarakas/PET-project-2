@@ -26,7 +26,7 @@ class Capture:
 def query(grid, queries):
     query_args = [arg for argtuple in zip(["-T"]*len(queries), queries) for arg in argtuple]
     #print("executing", " ".join(["python3", "part1/client.py", "grid", str(grid)] + query_args + ["-t"]))
-    subprocess.call(["python3", "part1/client.py", "grid", str(grid)] + query_args + ["-t"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    subprocess.call(["python3", "/client/part1/client.py", "grid", str(grid)] + query_args + ["-t"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 if __name__ == "__main__":
     query_types = ["restaurant", "bar", "sushi"]
