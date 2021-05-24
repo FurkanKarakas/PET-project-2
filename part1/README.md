@@ -28,4 +28,4 @@ where `<NAME OF THE FILE>` is one of the two files mentioned above. As failure p
 
 ## Benchmarking
 
-We wrote performance tests in terms of communication and computational costs using the `pytest-benchmark` software. We did performance tests of the system for different number of user attributes, in particular, when the user subscribed for 5, 10, 20, 50, 100, and 500 attributes.
+We wrote performance tests in terms of communication and computational costs using the `pytest-benchmark` software. We did performance tests of the system for different number of user attributes, in particular, when the user subscribed for 5, 10, 20, 50, 100, and 500 attributes. You can use the same command above in order to perform the benchmarking tests, just replacing the name of the files with proper benchmarking test files.
