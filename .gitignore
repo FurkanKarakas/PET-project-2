@@ -9,3 +9,4 @@ __pycache__/
 *.cred
 *.pcap
 .metals/
+.ipynb_checkpoints/
