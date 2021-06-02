@@ -12,11 +12,11 @@ class Capture:
     def __init__(self, name):
         index = 0
         self.out_path = os.path.join(
-            "fingerprinting/data", f"{name}_{index:03}.pcap")
+            "/client/part3/data", f"{name}_{index:03}.pcap")
         while os.path.exists(self.out_path):
             index += 1
             self.out_path = os.path.join(
-                "fingerprinting/data", f"{name}_{index:03}.pcap")
+                "/client/part3/data", f"{name}_{index:03}.pcap")
         self.process = None
 
     def __enter__(self):
