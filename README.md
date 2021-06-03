@@ -4,6 +4,23 @@
 
 This repository contains our files for the SecretStroll project of CS-523. The three parts are implemented in the folders `part1`, `part2` and `part3`, each of which contains it's own README to explain our Code for that part of the project.
 
+As explained below, we used the following commands to set up our server:
+```
+$ docker-compose build
+$ docker-compose up -d
+$ docker exec -it cs523-server /bin/bash
+root@cf9d3b262f5e:/# cd server/
+root@cf9d3b262f5e:/server# python3 part1/server.py setup -S restaurant -S bar -S sushi -S dojo
+root@cf9d3b262f5e:/server# python3 part1/server.py run
+```
+
+Then the client can be set up to be ready for the data collection in part3:
+```
+$ docker exec -it cs523-client /bin/bash
+root@52dd567ef563:/# python3 client.py register -u rudolf -S restaurant -S bar -S sushi
+root@52dd567ef563:/# python3 client/part1/client.py register -u rudolf -S restaurant -S bar -S sushi
+```
+
 ## Introduction
 
 In this project, you will develop a location-based application, SecretStroll,
