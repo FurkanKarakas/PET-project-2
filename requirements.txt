@@ -12,4 +12,4 @@ scapy
 ipython
 matplotlib
 pandas
-
+sklearn
