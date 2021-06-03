@@ -1,5 +1,8 @@
 # SecretStroll
 
+## Information about our Implementation
+This repository contains our files for the SecretStroll project of CS-523. The three parts are implemented in the folders `part1`, `part2` and `part3`, each of which contains it's own README to explain our Code for that part of the project.
+
 ## Introduction
 
 In this project, you will develop a location-based application, SecretStroll,
