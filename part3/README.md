@@ -13,9 +13,11 @@ This is the README.md file for the third part of the second project of the Advan
 In order to collect data, we used the script `collect_data.py` which uses `tcpdump` in the Docker container to sniff on the client's network traffic while requesting a location server by using the Tor network. We captured packets for every grid from 1 to 100 with 29 samples. For convenience, we did not include the captured files in this repository. They can be accessed via [this link](https://polybox.ethz.ch/index.php/s/cyhYyJPbq7oW2VO).
 
 The collection has to be run from within the client container and can be started with the following command:
+
 ```Bash
 docker exec -it cs523-client python3 /client/part3/collect_data.py
 ```
+
 **Note:** One has to make sure that both client and server containers are running and that the client has valid subscription keys in its root folder `/`.
 
 ## Network traffic analysis
@@ -24,7 +26,7 @@ The captured data has to first be converted into feature sets that can be used f
 
 The analysis can be started with `python3 fingerprinting.py`. This will start a comparison between the different feature sets extracted in the previous step. This comparison takes all possible combination of up to three feature sets, which takes several hours to conduct. This is the output we obtained by running the script, showing how the size_histogram feature set dominates the leader board:
 
-```
+```log
 Ranking:
   1. acc:0.95833, std:0.00859, size_histogram,basic_counts
   2. acc:0.95753, std:0.00693, size_histogram,basic_counts,number_of_packets
@@ -326,6 +328,6 @@ Ranking:
 298. acc:0.03196, std:0.00830, percentage_incoming
 ```
 
+## Plots
 
-# Plots
 The plots for the report were generated with the `draw_plots.py` script.
