@@ -5,6 +5,7 @@ petrelic
 PySocks
 pylint
 pytest
+pytest-benchmark
 requests
 scikit-learn
 numpy
