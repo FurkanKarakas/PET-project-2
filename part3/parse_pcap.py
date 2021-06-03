@@ -232,7 +232,7 @@ if __name__ == "__main__":
         number_of_packets
     ]
 
-    measurements = list(get_measurements("data.total", FILTERS, FEATURES))
+    measurements = list(get_measurements("data", FILTERS, FEATURES))
     features = {}
     for measurement in tqdm(measurements, "collecting features"):
         for feature_name, values in measurement.features.items():
