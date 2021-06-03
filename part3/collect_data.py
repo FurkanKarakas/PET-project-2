@@ -37,6 +37,9 @@ def query(grid, queries):
 
 
 if __name__ == "__main__":
+    if not os.path.exists("/client/part3/data"):
+        os.makedirs("/client/part3/data")
+
     query_types = ["restaurant", "bar", "sushi"]
     while True:
         for cell_id in range(1, 101):
