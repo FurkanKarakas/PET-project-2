@@ -1,9 +1,15 @@
 # SecretStroll
 
-## Information about our implementation
+## Information about our Implementation
+This repository contains our files for the SecretStroll project of CS-523. The three parts are implemented in the folders `part1`, `part2` and `part3`, each of which contains it's own README to explain our Code for that part of the project. However, this is the general setup, required for all of the three parts:
 
-This repository contains our files for the SecretStroll project of CS-523. The three parts are implemented in the folders `part1`, `part2` and `part3`, each of which contains it's own README to explain our Code for that part of the project.
+### Python requirements
+Install the python requirements
+```
+pip3 install -r requirements.txt
+```
 
+### Docker containers
 As explained below, we used the following commands to set up our server:
 ```
 $ docker-compose build
@@ -21,7 +27,9 @@ root@52dd567ef563:/# python3 client.py register -u rudolf -S restaurant -S bar -
 root@52dd567ef563:/# python3 client/part1/client.py register -u rudolf -S restaurant -S bar -S sushi
 ```
 
-## Introduction
+## Project Instructions
+For the sake of completeness we also include the original instructions in the readme below:
+### Introduction
 
 In this project, you will develop a location-based application, SecretStroll,
 that enables users to search for nearby points of interest (POI). We provide you
@@ -64,7 +72,7 @@ working with cryptographic primitives. In this project, you **must** use the
 _pytest_ framework to test your system. You can visit
 [https://www.tutorialspoint.com/pytest/index.htm](pytest_turorials) for guides.
 
-## Setting up the development environment
+### Setting up the development environment
 
 We use Python 3 in this project and all necessary Python components are already
 installed on the VM and dockers. You can find installed libraries in the
@@ -73,13 +81,13 @@ installed on the VM and dockers. You can find installed libraries in the
 Feel free to have a look at `client.py` and `server.py` to see how the classes
 and methods are used.
 
-### Collaboration
+#### Collaboration
 
 You can use git repositories to sync your work with your teammates. However,
 keep in mind that you are not allowed to use public repositories, so make sure
 that your repository is **private**.
 
-### Virtual machine
+#### Virtual machine
 
 We provide you with a VM for SecretStroll project. We have already installed the
 skeleton, and all the necessary applications and libraries on the VM. **We only
@@ -96,7 +104,7 @@ root:root
 You can set up ssh on the VM and connect from your host or directly use the VM
 as your development environment.
 
-### Setting up ssh in VirtualBox
+#### Setting up ssh in VirtualBox
 
 In VirtualBox, you can set up ssh access to the VM by following these steps:
 
@@ -117,7 +125,7 @@ This is how you copy files _TO_ the VM:
 Copy files _FROM_ the VM:
 `scp -P 2222 student@127.0.0.1:<path_to_copy_from_on_guest_OS> <path_to_copy_to_on_host_OS>`
 
-## Files in this repository
+### Files in this repository
 
 This repostory contains the skeleton code for Parts 1 and 3:
 
@@ -138,13 +146,13 @@ This repostory contains the skeleton code for Parts 1 and 3:
 
 The directory `privacy_evaluation` contains files for the part 2.
 
-## Server and client deployment
+### Server and client deployment
 
 The server and client code deployment is handled by Docker and our skeleton. In
 this section, we introduce our Docker infrastructure and how to use it. Then, we
 provide a step-by-step guide of running the client and server.
 
-### Working with the Docker infrastructure
+#### Working with the Docker infrastructure
 
 _Before launching the infrastructure, ensure the `tor` directory in the project
 skeleton has the correct permissions_
@@ -188,7 +196,7 @@ creation of the new ones when you to re-launch the infrastructure the next time.
 This can be fixed by removing the network bridge with `docker-compose down` and
 destroying the stopped Docker containers with `docker container prune -f`._
 
-### Accessing the data
+#### Accessing the data
 
 The code of the skeleton is shared between your VM and Docker containers, so
 modifications you make in your VM will also appear in containers. Feel free to
@@ -200,7 +208,7 @@ is to have shared directories between the VM and your host. For this feature to
 work correctly you have to install _Guest Additions_ from VirtualBox on the VM
 and refer to their documentation.
 
-### Tor integration
+#### Tor integration
 
 If you use the skeleton, integrating Tor into your project should be seamless.
 The Docker configuration we provide is designed to run Tor in the background,
@@ -216,7 +224,7 @@ within the Docker container:
 
 If the problem persists, call an assistant.
 
-### Server
+#### Server
 
 It is easier to run the commands in a Docker container by opening a shell, and
 then running the commands inside this shell.
@@ -280,7 +288,7 @@ The database has a POI table that contains records for each POI. The server
 returns the list of POIs associated with a queried cell ID, and information
 about each POI in the list. You must not modify the database.
 
-### Client
+#### Client
 
 To execute a shell in the client container, run the following command:
 
@@ -380,7 +388,7 @@ optional arguments:
   -t, --tor             Use Tor to connect to the server.
 ```
 
-## A sample run of Part 1
+### A sample run of Part 1
 
 Here we show a typical run of the system for Part 1.
 
@@ -424,7 +432,7 @@ Close everything down at the end of the experiment:
 docker-compose down
 ```
 
-## A sample run of Part 3
+### A sample run of Part 3
 
 Here we provide a typical run of the system for Part 3:
 
