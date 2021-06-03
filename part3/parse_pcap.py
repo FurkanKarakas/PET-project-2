@@ -26,7 +26,6 @@ class Measurement:
 
 
 def get_measurements(folder, filters, feature_functions):
-    # for file in tqdm(random.sample(os.listdir(folder),100), "extracting features"):
     for file in tqdm(sorted(os.listdir(folder)), "extracting features"):
         path = os.path.join(folder, file)
         cell_id, measurement_id = tuple(
@@ -57,6 +56,7 @@ def packet_accums(packets):
         out.append(accum)
     return out
 
+
 def accum_in(packets):
     out = []
     accum = 0
@@ -65,6 +65,7 @@ def accum_in(packets):
             accum += len(p)
         out.append(accum)
     return out
+
 
 def accum_out(packets):
     out = []
@@ -76,7 +77,7 @@ def accum_out(packets):
     return out
 
 
-def size_markers(packets, rounding_increment=1):
+def size_markers(packets):
     direction = None
     accum = 0
     out = []
@@ -85,26 +86,13 @@ def size_markers(packets, rounding_increment=1):
             direction = get_direction(packet)
         new_direction = get_direction(packet)
         if new_direction != direction:
-            out.append(round_to_increment(accum, rounding_increment))
+            out.append(accum)
             accum = 0
         accum += len(packet)
     return [len(out)] + out
 
 
-"""
-groups={1: [1],
-        2: [3, 4, 5],
-        3: [6, 7, 8],
-        4: [9, 10, 11, 12, 13]
-        }
-"""
-
-
-def number_markers(packets, groups={1: [1],
-                                    2: [3, 4, 5],
-                                    3: [6, 7, 8],
-                                    4: [9, 10, 11, 12, 13]
-                                    }):
+def number_markers(packets):
     direction = None
     accum = 0
     out = []
@@ -113,12 +101,6 @@ def number_markers(packets, groups={1: [1],
             direction = get_direction(packet)
         new_direction = get_direction(packet)
         if new_direction != direction:
-            # for key, group in groups.items():
-            #     if accum in group:
-            #         out.append(key)
-            #         break
-            # else:
-            #     out.append(key+1)
             out.append(accum)
             accum = 0
         accum += 1
@@ -181,6 +163,27 @@ def basic_counts(packets):
     return [count_outgoing, raw_outgoing, count_incoming, raw_incoming]
 
 
+def size_histogram(packets, max_size=1000000, n_buckets=70):
+    volume_in = []
+    timestamps_in = []
+    for packet in packets:
+        volume_in.append(len(packet))
+        timestamps_in.append(packet.time)
+    volume_in = np.array(volume_in)
+    accum_in = np.add.accumulate(volume_in)
+    timestamps_in = np.array(timestamps_in)
+    timestamps_in -= min(timestamps_in)
+
+    timestamp_diffs = timestamps_in[1:]-timestamps_in[:-1]
+    histogram = np.zeros(n_buckets)
+    for a, t in zip(accum_in[1:], timestamp_diffs):
+        bucket = int(n_buckets * a/max_size)
+        if bucket >= len(histogram):
+            bucket = len(histogram)-1
+        histogram[bucket] += t
+    return histogram
+
+
 def pad_lists_to_numpy(lists):
     max_len = max(len(l) for l in lists)
     out = np.zeros(shape=(len(lists), max_len))
@@ -215,17 +218,18 @@ if __name__ == "__main__":
     ]
 
     FEATURES = [
+        size_histogram,
         accum_in,
-        accum_out
-        #basic_counts,
-        #packet_lengths,
-        #packet_accums,
-        #size_markers,
-        #number_markers,
-        #occuring_incoming_packet_sizes,
-        #occuring_outgoing_packet_sizes,
-        #percentage_incoming,
-        #number_of_packets
+        accum_out,
+        basic_counts,
+        packet_lengths,
+        packet_accums,
+        size_markers,
+        number_markers,
+        occuring_incoming_packet_sizes,
+        occuring_outgoing_packet_sizes,
+        percentage_incoming,
+        number_of_packets
     ]
 
     measurements = list(get_measurements("data.total", FILTERS, FEATURES))
@@ -246,6 +250,6 @@ if __name__ == "__main__":
         else:
             out = pad_lists_to_numpy(value_list)
         np.save(os.path.join(out_folder, f"X-{feature_name}.npy"), out)
-    
+
     y = np.array([m.cell_id for m in measurements])
     np.save(os.path.join(out_folder, "y.npy"), y)
